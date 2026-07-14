@@ -59,7 +59,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onNavigat
         Breathing={true}
         startingGap={125}
         gradientColors={["#0A0A0A", "#e11d48", "#f87171", "#6b7280", "#be123c", "#4b5563", "#d1d5db"]}
-        gradientStops={[44, 57, 66, 74, 83, 91, 100]}
+        gradientStops={[48, 57, 66, 74, 83, 91, 100]}
       />
 
       <p className="relative z-10 text-lg text-gray-300 md:text-xl max-w-lg text-center mb-12 px-4">

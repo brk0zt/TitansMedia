@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../api/client';
 import AnimatedSearchBar from '@/components/ui/AnimatedSearchBar';
+import { AdAccountToast, type AdAccountNotification } from '@/components/ui/AdAccountToast';
 
 interface BillingData {
   loading: boolean;
@@ -388,6 +389,13 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [editingAdId, setEditingAdId] = React.useState<string | null>(null);
   const [adForm, setAdForm] = React.useState<{ name: string; account_id: string; fb_ad_account_id: string; status: string }>({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' });
   const [adSaving, setAdSaving] = React.useState(false);
+  const [toasts, setToasts] = React.useState<AdAccountNotification[]>([]);
+
+  const addToast = React.useCallback((n: Omit<AdAccountNotification, 'id'>) => {
+    const id = Date.now().toString();
+    setToasts(prev => [{ ...n, id }, ...prev]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500);
+  }, []);
 
   const [selectedBillingId, setSelectedBillingId] = React.useState<string | null>(null);
   const [billingCache, setBillingCache] = React.useState<Record<string, BillingData>>({});
@@ -625,6 +633,10 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           const updated = mapAdAccount(res.data.data ?? res.data);
           setAdAccounts(prev => prev.map(a => a.id === editingAdId ? updated : a));
           setShowAdForm(false);
+          addToast({ action: 'updated', name: updated.name, accountId: updated.accountId, status: 'success' });
+        })
+        .catch(err => {
+          addToast({ action: 'updated', name: payload.name, accountId: payload.account_id, status: 'error', message: err.response?.data?.message || 'Failed to update ad account' });
         })
         .finally(() => setAdSaving(false));
     } else {
@@ -633,6 +645,10 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           const created = mapAdAccount(res.data.data ?? res.data);
           setAdAccounts(prev => [created, ...prev]);
           setShowAdForm(false);
+          addToast({ action: 'created', name: created.name, accountId: created.accountId, status: 'success' });
+        })
+        .catch(err => {
+          addToast({ action: 'created', name: payload.name, accountId: payload.account_id, status: 'error', message: err.response?.data?.message || 'Failed to create ad account' });
         })
         .finally(() => setAdSaving(false));
     }
@@ -1627,6 +1643,8 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AdAccountToast notifications={toasts} onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
     </>
   );
 };
