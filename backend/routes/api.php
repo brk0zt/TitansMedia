@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\AdAccountController;
 use App\Http\Controllers\Api\FacebookPageController;
 use App\Http\Controllers\Api\TeamMemberController;
 use App\Http\Controllers\Api\FacebookAccountController;
+use App\Http\Controllers\Api\FacebookBillingController;
 use App\Http\Middleware\AuthRateLimiter;
 use App\Http\Middleware\ApiRateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -89,4 +90,7 @@ Route::middleware(['auth:sanctum', ApiRateLimiter::class])->group(function () {
     Route::post('/business-managers/{businessManager}/facebook-accounts', [FacebookAccountController::class, 'store']);
     Route::put('/business-managers/{businessManager}/facebook-accounts/{facebookAccount}', [FacebookAccountController::class, 'update']);
     Route::delete('/business-managers/{businessManager}/facebook-accounts/{facebookAccount}', [FacebookAccountController::class, 'destroy']);
+
+    // Facebook Graph API Billing (proxied via backend for token security)
+    Route::get('/ad-accounts/{adAccount}/billing', [FacebookBillingController::class, 'billing'])->middleware('throttle:30,1');
 });

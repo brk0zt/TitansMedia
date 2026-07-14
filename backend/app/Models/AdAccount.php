@@ -10,6 +10,7 @@ class AdAccount extends Model
     protected $fillable = [
         'business_manager_id',
         'account_id',
+        'fb_ad_account_id',
         'name',
         'status',
         'spend',

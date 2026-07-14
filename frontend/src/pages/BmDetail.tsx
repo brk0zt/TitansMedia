@@ -38,9 +38,42 @@ import {
 } from 'lucide-react';
 import apiClient from '../api/client';
 
+interface BillingData {
+  loading: boolean;
+  error: string | null;
+  errorType: string | null;
+  data: BillingResponse | null;
+}
+
+interface BillingResponse {
+  id: string;
+  ad_account_id: string;
+  name: string;
+  facebook: {
+    balance: number | null;
+    spend: number | null;
+    amount_spent: number | null;
+    account_status: number | null;
+    currency: string | null;
+    business_name: string | null;
+    spend_cap: number | null;
+    budget_remaining: number | null;
+    daily_spend: number | null;
+    min_campaign_group_spend_cap: number | null;
+    disable_reason: number | null;
+  } | null;
+  local: {
+    spend: number;
+    impressions: number;
+    clicks: number;
+    currency: string;
+  };
+}
+
 interface AdAccount {
   id: string;
   accountId: string;
+  fbAdAccountId: string | null;
   name: string;
   status: 'active' | 'disabled';
   spend: number;
@@ -102,8 +135,9 @@ interface BusinessManager {
 const availableRoles = ['Admin', 'Ad Manager', 'Analyst', 'Viewer'];
 
 const mapAdAccount = (item: any): AdAccount => ({
-  id: item.account_id || String(item.id),
+  id: String(item.id),
   accountId: item.account_id || String(item.id),
+  fbAdAccountId: item.fb_ad_account_id || null,
   name: item.name,
   status: item.status,
   spend: item.spend,
@@ -360,6 +394,33 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [editingFbId, setEditingFbId] = React.useState<string | null>(null);
   const [fbForm, setFbForm] = React.useState(defaultFbForm);
   const [fbSaving, setFbSaving] = React.useState(false);
+
+  const [selectedBillingId, setSelectedBillingId] = React.useState<string | null>(null);
+  const [billingCache, setBillingCache] = React.useState<Record<string, BillingData>>({});
+
+  const fetchBilling = React.useCallback((adAccountId: string) => {
+    const cached = billingCache[adAccountId];
+    if (cached && (cached.data || cached.error)) return;
+
+    setBillingCache(prev => ({ ...prev, [adAccountId]: { loading: true, error: null, errorType: null, data: null } }));
+
+    apiClient.get(`/ad-accounts/${adAccountId}/billing`)
+      .then(res => {
+        setBillingCache(prev => ({ ...prev, [adAccountId]: { loading: false, error: null, errorType: null, data: res.data } }));
+      })
+      .catch(err => {
+        const data = err.response?.data;
+        setBillingCache(prev => ({
+          ...prev,
+          [adAccountId]: {
+            loading: false,
+            error: data?.message || 'Failed to fetch billing data.',
+            errorType: data?.error || 'unknown',
+            data: null,
+          },
+        }));
+      });
+  }, [billingCache]);
 
   const [showInvite, setShowInvite] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState('');
@@ -736,52 +797,171 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                 {activeTab === 'ad-accounts' && (
                   <div className="space-y-2">
                     {filteredAdAccounts.map((account, i) => (
-                      <motion.div
-                        key={account.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.03, duration: 0.3 }}
-                        className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default cursor-pointer"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-white/[0.06] flex items-center justify-center shrink-0">
-                          <BarChart3 className="w-5 h-5 text-white/40" strokeWidth={1.5} />
-                        </div>
-                        <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-5 items-center gap-4">
-                          <div className="sm:col-span-2 min-w-0">
-                            <p className="text-sm font-medium text-white/80 truncate">{account.name}</p>
-                            <p className="text-[11px] text-white/25 font-[425] mt-0.5">{account.accountId}</p>
+                      <React.Fragment key={account.id}>
+                        <motion.div
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.03, duration: 0.3 }}
+                          onClick={() => {
+                            if (selectedBillingId === account.id) {
+                              setSelectedBillingId(null);
+                            } else {
+                              setSelectedBillingId(account.id);
+                              if (account.fbAdAccountId) fetchBilling(account.id);
+                            }
+                          }}
+                          className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default cursor-pointer"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-white/[0.06] flex items-center justify-center shrink-0">
+                            <BarChart3 className="w-5 h-5 text-white/40" strokeWidth={1.5} />
                           </div>
-                          <div className="hidden sm:block text-right">
-                            <p className="text-xs text-white/30 font-[425]">Spend</p>
-                            <p className="text-sm font-semibold text-white/80">{formatCurrency(account.spend, account.currency)}</p>
+                          <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-5 items-center gap-4">
+                            <div className="sm:col-span-2 min-w-0">
+                              <p className="text-sm font-medium text-white/80 truncate">{account.name}</p>
+                              <p className="text-[11px] text-white/25 font-[425] mt-0.5">{account.accountId}</p>
+                            </div>
+                            <div className="hidden sm:block text-right">
+                              <p className="text-xs text-white/30 font-[425]">Spend</p>
+                              <p className="text-sm font-semibold text-white/80">{formatCurrency(account.spend, account.currency)}</p>
+                            </div>
+                            <div className="hidden sm:block text-right">
+                              <p className="text-xs text-white/30 font-[425]">Impressions</p>
+                              <p className="text-sm font-semibold text-white/80">{formatNumber(account.impressions)}</p>
+                            </div>
+                            <div className="hidden sm:block text-right">
+                              <p className="text-xs text-white/30 font-[425]">Clicks</p>
+                              <p className="text-sm font-semibold text-white/80">{formatNumber(account.clicks)}</p>
+                            </div>
                           </div>
-                          <div className="hidden sm:block text-right">
-                            <p className="text-xs text-white/30 font-[425]">Impressions</p>
-                            <p className="text-sm font-semibold text-white/80">{formatNumber(account.impressions)}</p>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                account.status === 'active'
+                                  ? 'bg-emerald-500/10 text-emerald-400'
+                                  : 'bg-white/[0.05] text-white/30'
+                              }`}
+                            >
+                              {account.status === 'active' ? (
+                                <PlayCircle className="w-3 h-3" strokeWidth={1.5} />
+                              ) : (
+                                <PauseCircle className="w-3 h-3" strokeWidth={1.5} />
+                              )}
+                              {account.status}
+                            </span>
+                            <ChevronRight className={`w-4 h-4 transition-default ${selectedBillingId === account.id ? 'rotate-90 text-white/40' : 'text-white/15 group-hover:text-white/30'}`} strokeWidth={1.5} />
                           </div>
-                          <div className="hidden sm:block text-right">
-                            <p className="text-xs text-white/30 font-[425]">Clicks</p>
-                            <p className="text-sm font-semibold text-white/80">{formatNumber(account.clicks)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 shrink-0">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                              account.status === 'active'
-                                ? 'bg-emerald-500/10 text-emerald-400'
-                                : 'bg-white/[0.05] text-white/30'
-                            }`}
-                          >
-                            {account.status === 'active' ? (
-                              <PlayCircle className="w-3 h-3" strokeWidth={1.5} />
-                            ) : (
-                              <PauseCircle className="w-3 h-3" strokeWidth={1.5} />
-                            )}
-                            {account.status}
-                          </span>
-                          <ChevronRight className="w-4 h-4 text-white/15 group-hover:text-white/30 transition-default" strokeWidth={1.5} />
-                        </div>
-                      </motion.div>
+                        </motion.div>
+
+                        <AnimatePresence>
+                          {selectedBillingId === account.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className="p-5 ml-14 mb-2 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-4">
+                                {!account.fbAdAccountId ? (
+                                  <div className="flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 text-white/20 shrink-0 mt-0.5" strokeWidth={1.5} />
+                                    <div>
+                                      <p className="text-sm text-white/50 font-medium">No Facebook Ad Account linked</p>
+                                      <p className="text-xs text-white/25 font-[425] mt-1">Add a Facebook Ad Account ID to this ad account to fetch billing data from Graph API.</p>
+                                    </div>
+                                  </div>
+                                ) : (() => {
+                                  const bill = billingCache[account.id];
+                                  if (!bill || bill.loading) {
+                                    return (
+                                      <div className="flex items-center gap-3">
+                                        <Loader2 className="w-5 h-5 text-white/30 animate-spin shrink-0" strokeWidth={1.5} />
+                                        <p className="text-sm text-white/40 font-[425]">Fetching billing data from Facebook Graph API...</p>
+                                      </div>
+                                    );
+                                  }
+                                  if (bill.error) {
+                                    const errorConfigs: Record<string, { color: string; icon: typeof AlertCircle; title: string }> = {
+                                      'token_expired': { color: 'text-rose-400', icon: XCircle, title: 'Token Expired' },
+                                      'rate_limited': { color: 'text-amber-400', icon: Timer, title: 'Rate Limited' },
+                                      'permission_error': { color: 'text-orange-400', icon: Shield, title: 'Permission Error' },
+                                      'connection_error': { color: 'text-amber-400', icon: Globe, title: 'Connection Error' },
+                                    };
+                                    const cfg = errorConfigs[bill.errorType || ''] || { color: 'text-white/50', icon: AlertCircle, title: 'Error' };
+                                    const Icon = cfg.icon;
+                                    return (
+                                      <div className="flex items-start gap-3">
+                                        <Icon className={`w-5 h-5 ${cfg.color} shrink-0 mt-0.5`} strokeWidth={1.5} />
+                                        <div>
+                                          <p className={`text-sm font-medium ${cfg.color}`}>{cfg.title}</p>
+                                          <p className="text-xs text-white/30 font-[425] mt-1">{bill.error}</p>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  if (bill.data && bill.data.facebook) {
+                                    const fb = bill.data.facebook;
+                                    const accountStatusLabels: Record<number, { label: string; color: string }> = {
+                                      1: { label: 'Active', color: 'text-emerald-400' },
+                                      2: { label: 'Disabled', color: 'text-rose-400' },
+                                      3: { label: 'Unsettled', color: 'text-amber-400' },
+                                      7: { label: 'Pending Risk Review', color: 'text-orange-400' },
+                                      9: { label: 'In Grace Period', color: 'text-amber-400' },
+                                      100: { label: 'Pending Closure', color: 'text-rose-400/70' },
+                                      101: { label: 'Closed', color: 'text-white/30' },
+                                    };
+                                    const st = fb.account_status !== null ? accountStatusLabels[fb.account_status] : null;
+                                    const row = (label: string, val: string, accent = false) => (
+                                      <div className="flex items-center justify-between py-1.5">
+                                        <span className="text-xs text-white/30 font-[425]">{label}</span>
+                                        <span className={`text-xs font-semibold ${accent ? 'text-titans-accent' : 'text-white/80'}`}>{val}</span>
+                                      </div>
+                                    );
+                                    return (
+                                      <div className="space-y-1">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium text-white/80">Billing & Threshold</p>
+                                            <span className="bg-blue-500/10 text-blue-400 text-[10px] px-1.5 py-0.5 rounded font-medium border border-blue-500/15">Graph API</span>
+                                          </div>
+                                          {st && <span className={`text-xs font-medium ${st.color}`}>{st.label}</span>}
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] mb-2">
+                                          <div>
+                                            <p className="text-[10px] text-white/25 font-[425]">Balance</p>
+                                            <p className="text-sm font-semibold text-emerald-400">
+                                              {fb.balance !== null ? formatCurrency(fb.balance / 100, fb.currency || 'USD') : '—'}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-[10px] text-white/25 font-[425]">Amount Spent</p>
+                                            <p className="text-sm font-semibold text-white/80">
+                                              {fb.amount_spent !== null ? formatCurrency(fb.amount_spent / 100, fb.currency || 'USD') : '—'}
+                                            </p>
+                                          </div>
+                                          <div>
+                                            <p className="text-[10px] text-white/25 font-[425]">Daily Spend</p>
+                                            <p className="text-sm font-semibold text-white/80">
+                                              {fb.daily_spend !== null ? formatCurrency(fb.daily_spend / 100, fb.currency || 'USD') : '—'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          {fb.spend_cap !== null && row('Spend Cap', formatCurrency(fb.spend_cap / 100, fb.currency || 'USD'))}
+                                          {fb.budget_remaining !== null && row('Budget Remaining', formatCurrency(fb.budget_remaining / 100, fb.currency || 'USD'))}
+                                          {fb.min_campaign_group_spend_cap !== null && row('Min Campaign Spend Cap', formatCurrency(fb.min_campaign_group_spend_cap / 100, fb.currency || 'USD'))}
+                                          {fb.business_name && row('Business Name', fb.business_name)}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </React.Fragment>
                     ))}
                     {filteredAdAccounts.length === 0 && (
                       <div className="text-center py-12">
