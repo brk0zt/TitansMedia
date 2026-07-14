@@ -18,7 +18,9 @@ const businessManagers = [
   { id: 6, name: 'Crest Media Australia', business_id: '210987654321098', verified: true, balance: 7610.40, currency: 'AUD', overdue: 0, ad_account_count: 5, page_count: 7, user_count: 14, created_at: '2026-02-22T14:00:00Z', updated_at: '2026-07-13T08:00:00Z' },
 ];
 
-const adAccounts = {
+// --- AD ACCOUNTS ---
+// Store originals for hourly reset
+const initialAdAccounts = {
   1: [
     { id: 1, account_id: 'act_123456', name: 'Titans Global Display', status: 'active', spend: 18450.00, currency: 'USD', impressions: 2450000, clicks: 48200, fb_ad_account_id: 'act_123456', created_at: '2026-01-25T10:00:00Z' },
     { id: 2, account_id: 'act_234567', name: 'Titans Social Pro', status: 'active', spend: 12380.00, currency: 'USD', impressions: 1890000, clicks: 35100, fb_ad_account_id: 'act_234567', created_at: '2026-02-01T11:00:00Z' },
@@ -31,14 +33,20 @@ const adAccounts = {
   ],
 };
 
-const facebookPages = {
+// Deep copy for the mutable version
+const adAccounts = JSON.parse(JSON.stringify(initialAdAccounts));
+
+// --- FACEBOOK PAGES ---
+const initialFacebookPages = {
   1: [
-    { id: 1, page_id: 'page_001', name: 'Titans Media Global', category: 'Media & News', followers: 284000, engaged: 12400, status: 'published', created_at: '2026-01-22T08:00:00Z' },
-    { id: 2, page_id: 'page_002', name: 'Titans Insights', category: 'Consulting', followers: 89000, engaged: 4300, status: 'published', created_at: '2026-02-05T09:00:00Z' },
-    { id: 3, page_id: 'page_003', name: 'Titans Careers', category: 'Recruiting', followers: 45000, engaged: 2100, status: 'published', created_at: '2026-02-18T10:00:00Z' },
-    { id: 4, page_id: 'page_004', name: 'Titans Community', category: 'Community', followers: 32000, engaged: 1800, status: 'unpublished', created_at: '2026-03-01T11:00:00Z' },
+    { id: 1, page_id: 'page_001', name: 'Titans Media Global', category: 'Media & News', followers: 284000, engaged: 12400, status: 'published', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-01-22T08:00:00Z' },
+    { id: 2, page_id: 'page_002', name: 'Titans Insights', category: 'Consulting', followers: 89000, engaged: 4300, status: 'published', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-02-05T09:00:00Z' },
+    { id: 3, page_id: 'page_003', name: 'Titans Careers', category: 'Recruiting', followers: 45000, engaged: 2100, status: 'published', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-02-18T10:00:00Z' },
+    { id: 4, page_id: 'page_004', name: 'Titans Community', category: 'Community', followers: 32000, engaged: 1800, status: 'unpublished', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-03-01T11:00:00Z' },
   ],
 };
+
+const facebookPages = JSON.parse(JSON.stringify(initialFacebookPages));
 
 const teamMembers = {
   1: [
@@ -50,6 +58,62 @@ const teamMembers = {
   ],
 };
 
+// --- DYNAMIC DATA ENGINE ---
+// Every 90 seconds, decrease each active account's spend by $1
+// Every hour on the hour, reset all ad/spend data to initial values
+
+function resetAdData() {
+  for (const bmId in initialAdAccounts) {
+    adAccounts[bmId] = JSON.parse(JSON.stringify(initialAdAccounts[bmId]));
+  }
+  for (const bmId in initialFacebookPages) {
+    facebookPages[bmId] = JSON.parse(JSON.stringify(initialFacebookPages[bmId]));
+  }
+}
+
+function tickDecrease() {
+  for (const bmId in adAccounts) {
+    for (const acct of adAccounts[bmId]) {
+      if (acct.status === 'active' && acct.spend > 0) {
+        acct.spend = Math.max(0, acct.spend - 1);
+        // Also reduce impressions/clicks proportionally
+        const avgCpm = acct.impressions > 0 ? (acct.spend / acct.impressions * 1000) : 0;
+        if (avgCpm > 0) {
+          const newImpressions = Math.max(0, Math.round(acct.spend / avgCpm * 1000));
+          const ctr = acct.clicks > 0 && acct.impressions > 0 ? acct.clicks / acct.impressions : 0;
+          acct.impressions = newImpressions;
+          acct.clicks = Math.round(newImpressions * ctr);
+        }
+      }
+    }
+  }
+  // Also update BM balances
+  for (const bm of businessManagers) {
+    const bmAccounts = adAccounts[bm.id] || [];
+    const totalSpend = bmAccounts.reduce((sum, a) => sum + a.spend, 0);
+    bm.balance = Math.max(0, (bm.balance || 0) - 1);
+  }
+}
+
+// Schedule: decrease every 90 seconds
+const DECREASE_INTERVAL_MS = 90 * 1000;
+// Reset on the hour
+function scheduleHourlyReset() {
+  const now = new Date();
+  const nextHour = new Date(now);
+  nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+  const msUntilNextHour = nextHour.getTime() - now.getTime();
+  setTimeout(() => {
+    resetAdData();
+    // Re-schedule for the next hour
+    scheduleHourlyReset();
+  }, msUntilNextHour);
+}
+
+setInterval(tickDecrease, DECREASE_INTERVAL_MS);
+scheduleHourlyReset();
+
+// --- HTTP SERVER ---
 function json(res, status, data) {
   res.writeHead(status, {
     'Content-Type': 'application/json',
@@ -160,7 +224,7 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { data: pages });
   }
 
-  // BM: Ad Accounts
+  // BM: Ad Accounts (GET)
   const aaMatch = path.match(/^\/api\/business-managers\/(\d+)\/ad-accounts$/);
   if (method === 'GET' && aaMatch) {
     const token = getToken(req);
@@ -169,13 +233,113 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { data: accounts });
   }
 
-  // BM: Pages
+  // BM: Ad Accounts (POST - create)
+  if (method === 'POST' && aaMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(aaMatch[1]);
+    const body = await getBody(req);
+    if (!adAccounts[bmId]) adAccounts[bmId] = [];
+    const newAccount = {
+      id: Date.now(),
+      account_id: body.account_id || `act_${Math.random().toString(36).slice(2, 8)}`,
+      name: body.name,
+      status: body.status || 'active',
+      spend: 0,
+      currency: 'USD',
+      impressions: 0,
+      clicks: 0,
+      fb_ad_account_id: body.fb_ad_account_id || null,
+      created_at: new Date().toISOString(),
+    };
+    adAccounts[bmId].unshift(newAccount);
+    return json(res, 201, { data: newAccount, message: 'Ad account created.' });
+  }
+
+  // BM: Ad Accounts (PUT - update)
+  const aaUpdateMatch = path.match(/^\/api\/business-managers\/(\d+)\/ad-accounts\/(\d+)$/);
+  if (method === 'PUT' && aaUpdateMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(aaUpdateMatch[1]);
+    const aaId = parseInt(aaUpdateMatch[2]);
+    const body = await getBody(req);
+    const accounts = adAccounts[bmId];
+    if (!accounts) return json(res, 404, { message: 'Not found.' });
+    const acct = accounts.find(a => a.id === aaId);
+    if (!acct) return json(res, 404, { message: 'Not found.' });
+    Object.assign(acct, body, { id: aaId });
+    return json(res, 200, { data: acct });
+  }
+
+  // BM: Pages (GET)
   const pgMatch = path.match(/^\/api\/business-managers\/(\d+)\/pages$/);
   if (method === 'GET' && pgMatch) {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const pages = facebookPages[parseInt(pgMatch[1])] || [];
     return json(res, 200, { data: pages });
+  }
+
+  // BM: Pages (POST - create)
+  if (method === 'POST' && pgMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(pgMatch[1]);
+    const body = await getBody(req);
+    if (!facebookPages[bmId]) facebookPages[bmId] = [];
+    const newPage = {
+      id: Date.now(),
+      page_id: body.page_id || `page_${Math.random().toString(36).slice(2, 8)}`,
+      name: body.name,
+      category: body.category || '',
+      followers: body.followers || 0,
+      engaged: body.engaged || 0,
+      status: 'published',
+      token: body.token || '',
+      useragent: body.useragent || '',
+      proxy: body.proxy || '',
+      group_name: body.group_name || '',
+      cookie: body.cookie || '',
+      notify_balance_threshold: body.notify_balance_threshold ?? 0,
+      notify_cooldown_minutes: body.notify_cooldown_minutes ?? 60,
+      notify_moderation: body.notify_moderation ?? true,
+      notify_cabinet_status: body.notify_cabinet_status ?? true,
+      notify_billing: body.notify_billing ?? true,
+      created_at: new Date().toISOString(),
+    };
+    facebookPages[bmId].unshift(newPage);
+    return json(res, 201, { data: newPage, message: 'Facebook page created.' });
+  }
+
+  // BM: Pages (PUT - update)
+  const pgUpdateMatch = path.match(/^\/api\/business-managers\/(\d+)\/pages\/(\d+)$/);
+  if (method === 'PUT' && pgUpdateMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(pgUpdateMatch[1]);
+    const pgId = parseInt(pgUpdateMatch[2]);
+    const body = await getBody(req);
+    const pages = facebookPages[bmId];
+    if (!pages) return json(res, 404, { message: 'Not found.' });
+    const page = pages.find(p => p.id === pgId);
+    if (!page) return json(res, 404, { message: 'Not found.' });
+    Object.assign(page, body, { id: pgId });
+    return json(res, 200, { data: page });
+  }
+
+  // BM: Pages (DELETE)
+  if (method === 'DELETE' && pgUpdateMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(pgUpdateMatch[1]);
+    const pgId = parseInt(pgUpdateMatch[2]);
+    const pages = facebookPages[bmId];
+    if (pages) {
+      const idx = pages.findIndex(p => p.id === pgId);
+      if (idx !== -1) pages.splice(idx, 1);
+    }
+    return json(res, 200, { message: 'Facebook page deleted.' });
   }
 
   // BM: Members
@@ -275,5 +439,6 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n  🚀 Mock API server running at http://localhost:${PORT}`);
-  console.log(`  📋 Login: michael@titans.media / password123\n`);
+  console.log(`  📋 Login: michael@titans.media / password123`);
+  console.log(`  📊 Dynamic data: spend decreases by $1 every 90s, resets on the hour\n`);
 });
