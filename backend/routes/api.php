@@ -93,5 +93,5 @@ Route::middleware(['auth:sanctum', ApiRateLimiter::class])->group(function () {
     Route::delete('/business-managers/{businessManager}/facebook-accounts/{facebookAccount}', [FacebookAccountController::class, 'destroy']);
 
     // Facebook Graph API Billing (proxied via backend for token security)
-    Route::get('/ad-accounts/{adAccount}/billing', [FacebookBillingController::class, 'billing'])->middleware('throttle:30,1');
+    Route::get('/ad-accounts/{adAccount}/billing', [FacebookBillingController::class, 'billing']);
 });
