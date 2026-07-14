@@ -14,6 +14,16 @@ class FacebookPage extends Model
         'category',
         'followers',
         'engaged',
+        'token',
+        'useragent',
+        'proxy',
+        'group_name',
+        'cookie',
+        'notify_balance_threshold',
+        'notify_cooldown_minutes',
+        'notify_moderation',
+        'notify_cabinet_status',
+        'notify_billing',
         'status',
         'metadata',
     ];
@@ -21,6 +31,11 @@ class FacebookPage extends Model
     protected $casts = [
         'followers' => 'integer',
         'engaged' => 'integer',
+        'notify_balance_threshold' => 'decimal:2',
+        'notify_cooldown_minutes' => 'integer',
+        'notify_moderation' => 'boolean',
+        'notify_cabinet_status' => 'boolean',
+        'notify_billing' => 'boolean',
         'metadata' => 'array',
     ];
 

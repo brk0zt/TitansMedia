@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateFacebookAccountRequest extends FormRequest
+class UpdateFacebookPageRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,11 @@ class UpdateFacebookAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'page_id' => 'sometimes|string|max:64',
             'name' => 'sometimes|string|max:255',
+            'category' => 'nullable|string|max:128',
+            'followers' => 'sometimes|integer|min:0',
+            'engaged' => 'sometimes|integer|min:0',
             'token' => 'sometimes|string',
             'useragent' => 'sometimes|string|max:512',
             'proxy' => 'nullable|string|max:512',
@@ -25,7 +29,7 @@ class UpdateFacebookAccountRequest extends FormRequest
             'notify_moderation' => 'sometimes|boolean',
             'notify_cabinet_status' => 'sometimes|boolean',
             'notify_billing' => 'sometimes|boolean',
-            'status' => 'sometimes|string|in:active,disabled',
+            'status' => 'sometimes|string|in:published,unpublished',
         ];
     }
 }

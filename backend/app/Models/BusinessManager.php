@@ -51,8 +51,4 @@ class BusinessManager extends Model
         return $this->hasMany(BmInvitation::class);
     }
 
-    public function facebookAccounts(): HasMany
-    {
-        return $this->hasMany(FacebookAccount::class);
-    }
 }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\AdAccount;
-use App\Models\FacebookAccount;
+use App\Models\FacebookPage;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
@@ -30,8 +30,8 @@ class FacebookBillingController
             ], 400);
         }
 
-        $fbAccount = FacebookAccount::where('business_manager_id', $adAccount->business_manager_id)
-            ->where('status', 'active')
+        $fbAccount = FacebookPage::where('business_manager_id', $adAccount->business_manager_id)
+            ->whereNotNull('token')
             ->first();
 
         if (!$fbAccount) {

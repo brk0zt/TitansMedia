@@ -14,7 +14,7 @@ class BmController
     {
         $bms = $request->user()
             ->businessManagers()
-            ->withCount(['adAccounts', 'facebookPages', 'teamMembers', 'facebookAccounts'])
+            ->withCount(['adAccounts', 'facebookPages', 'teamMembers'])
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
 
@@ -25,7 +25,7 @@ class BmController
     {
         abort_if($businessManager->user_id !== $request->user()->id, 403);
 
-        $businessManager->loadCount(['adAccounts', 'facebookPages', 'teamMembers', 'facebookAccounts']);
+        $businessManager->loadCount(['adAccounts', 'facebookPages', 'teamMembers']);
 
         return new BusinessManagerResource($businessManager);
     }

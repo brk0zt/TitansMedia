@@ -89,21 +89,6 @@ interface Page {
   category: string;
   followers: number;
   engaged: number;
-  status: 'published' | 'unpublished';
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: 'active' | 'disabled';
-  lastActive: string;
-}
-
-interface FacebookAccount {
-  id: string;
-  name: string;
   token: string;
   useragent: string;
   proxy: string | null;
@@ -114,8 +99,16 @@ interface FacebookAccount {
   notify_moderation: boolean;
   notify_cabinet_status: boolean;
   notify_billing: boolean;
+  status: 'published' | 'unpublished';
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
   status: 'active' | 'disabled';
-  created_at: string;
+  lastActive: string;
 }
 
 interface BusinessManager {
@@ -153,6 +146,16 @@ const mapPage = (item: any): Page => ({
   category: item.category,
   followers: item.followers,
   engaged: item.engaged,
+  token: item.token || '',
+  useragent: item.useragent || '',
+  proxy: item.proxy || null,
+  group_name: item.group_name || null,
+  cookie: item.cookie || null,
+  notify_balance_threshold: item.notify_balance_threshold ?? 0,
+  notify_cooldown_minutes: item.notify_cooldown_minutes ?? 60,
+  notify_moderation: item.notify_moderation ?? true,
+  notify_cabinet_status: item.notify_cabinet_status ?? true,
+  notify_billing: item.notify_billing ?? true,
   status: item.status,
 });
 
@@ -163,23 +166,6 @@ const mapMember = (item: any): TeamMember => ({
   role: item.role,
   status: item.status,
   lastActive: item.last_active,
-});
-
-const mapFbAccount = (item: any): FacebookAccount => ({
-  id: String(item.id),
-  name: item.name,
-  token: item.token,
-  useragent: item.useragent,
-  proxy: item.proxy,
-  group_name: item.group_name,
-  cookie: item.cookie,
-  notify_balance_threshold: item.notify_balance_threshold,
-  notify_cooldown_minutes: item.notify_cooldown_minutes,
-  notify_moderation: item.notify_moderation,
-  notify_cabinet_status: item.notify_cabinet_status,
-  notify_billing: item.notify_billing,
-  status: item.status,
-  created_at: item.created_at,
 });
 
 const formatNumber = (n: number) => {
@@ -362,10 +348,14 @@ interface BmDetailProps {
   onBack: () => void;
 }
 
-type TabId = 'ad-accounts' | 'pages' | 'team' | 'facebook-accounts';
+type TabId = 'ad-accounts' | 'pages' | 'team';
 
-const defaultFbForm = {
+const defaultPageForm = {
   name: '',
+  page_id: '',
+  category: '',
+  followers: 0,
+  engaged: 0,
   token: '',
   useragent: navigator.userAgent || 'Mozilla/5.0',
   proxy: '',
@@ -378,6 +368,17 @@ const defaultFbForm = {
   notify_billing: true,
 };
 
+const pageFormFields = [
+  { key: 'name', label: 'Page Name', icon: Newspaper, type: 'text', placeholder: 'My Business Page', required: true },
+  { key: 'page_id', label: 'Page ID', icon: Hash, type: 'text', placeholder: '123456789012345', required: false },
+  { key: 'category', label: 'Category', icon: Globe, type: 'text', placeholder: 'Business', required: false },
+  { key: 'token', label: 'Token', icon: Key, type: 'text', placeholder: 'EAAB...', required: true },
+  { key: 'useragent', label: 'User Agent', icon: Globe, type: 'text', placeholder: 'Mozilla/5.0...', required: true },
+  { key: 'proxy', label: 'Proxy', icon: Globe, type: 'text', placeholder: 'http://user:pass@host:port', required: false },
+  { key: 'group_name', label: 'Group', icon: Users, type: 'text', placeholder: 'Group name', required: false },
+  { key: 'cookie', label: 'Cookie', icon: UserCheck, type: 'text', placeholder: 'c_user=...;xs=...', required: false },
+];
+
 export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [activeTab, setActiveTab] = React.useState<TabId>('ad-accounts');
   const [search, setSearch] = React.useState('');
@@ -386,14 +387,13 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [adAccounts, setAdAccounts] = React.useState<AdAccount[]>([]);
   const [pages, setPages] = React.useState<Page[]>([]);
   const [members, setMembers] = React.useState<TeamMember[]>([]);
-  const [fbAccounts, setFbAccounts] = React.useState<FacebookAccount[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [showFbForm, setShowFbForm] = React.useState(false);
-  const [editingFbId, setEditingFbId] = React.useState<string | null>(null);
-  const [fbForm, setFbForm] = React.useState(defaultFbForm);
-  const [fbSaving, setFbSaving] = React.useState(false);
+  const [showPageForm, setShowPageForm] = React.useState(false);
+  const [editingPageId, setEditingPageId] = React.useState<string | null>(null);
+  const [pageForm, setPageForm] = React.useState(defaultPageForm);
+  const [pageSaving, setPageSaving] = React.useState(false);
 
   const [selectedBillingId, setSelectedBillingId] = React.useState<string | null>(null);
   const [billingCache, setBillingCache] = React.useState<Record<string, BillingData>>({});
@@ -437,14 +437,12 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       apiClient.get(`/business-managers/${bmId}/ad-accounts`).then(r => r.data?.data ?? []),
       apiClient.get(`/business-managers/${bmId}/pages`).then(r => r.data?.data ?? []),
       apiClient.get(`/business-managers/${bmId}/members`).then(r => r.data?.data ?? []),
-      apiClient.get(`/business-managers/${bmId}/facebook-accounts`).then(r => r.data?.data ?? []),
     ])
-      .then(([accountsData, pagesData, membersData, fbData]) => {
+      .then(([accountsData, pagesData, membersData]) => {
         if (!cancelled) {
           setAdAccounts(accountsData.map(mapAdAccount));
           setPages(pagesData.map(mapPage));
           setMembers(membersData.map(mapMember));
-          setFbAccounts(fbData.map(mapFbAccount));
         }
       })
       .catch(() => {
@@ -461,7 +459,6 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     { id: 'ad-accounts', label: 'Ad Accounts', icon: BarChart3, count: adAccounts.length },
     { id: 'pages', label: 'Facebook Pages', icon: Newspaper, count: pages.length },
     { id: 'team', label: 'Team Members', icon: Users, count: members.length },
-    { id: 'facebook-accounts', label: 'FB Accounts', icon: UserCheck, count: fbAccounts.length },
   ];
 
   const filteredAdAccounts = React.useMemo(() => {
@@ -485,7 +482,8 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       list = list.filter(p =>
         p.name.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q)
+        p.id.toLowerCase().includes(q) ||
+        (p.group_name && p.group_name.toLowerCase().includes(q))
       );
     }
     if (filterStatus !== 'all') list = list.filter(p => (filterStatus === 'active' ? p.status === 'published' : p.status === 'unpublished'));
@@ -505,19 +503,6 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     if (filterStatus !== 'all') list = list.filter(m => m.status === filterStatus);
     return list;
   }, [search, filterStatus, members]);
-
-  const filteredFbAccounts = React.useMemo(() => {
-    let list = fbAccounts;
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(a =>
-        a.name.toLowerCase().includes(q) ||
-        (a.group_name && a.group_name.toLowerCase().includes(q))
-      );
-    }
-    if (filterStatus !== 'all') list = list.filter(a => a.status === filterStatus);
-    return list;
-  }, [search, filterStatus, fbAccounts]);
 
   const totalSpend = React.useMemo(
     () => adAccounts.reduce((sum, a) => sum + a.spend, 0),
@@ -559,11 +544,15 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       });
   };
 
-  const openFbForm = (existing?: FacebookAccount) => {
+  const openPageForm = (existing?: Page) => {
     if (existing) {
-      setEditingFbId(existing.id);
-      setFbForm({
+      setEditingPageId(existing.id);
+      setPageForm({
         name: existing.name,
+        page_id: existing.pageId,
+        category: existing.category,
+        followers: existing.followers,
+        engaged: existing.engaged,
         token: existing.token,
         useragent: existing.useragent,
         proxy: existing.proxy || '',
@@ -576,49 +565,40 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         notify_billing: existing.notify_billing,
       });
     } else {
-      setEditingFbId(null);
-      setFbForm({ ...defaultFbForm, useragent: navigator.userAgent || 'Mozilla/5.0' });
+      setEditingPageId(null);
+      setPageForm({ ...defaultPageForm, useragent: navigator.userAgent || 'Mozilla/5.0' });
     }
-    setShowFbForm(true);
+    setShowPageForm(true);
   };
 
-  const saveFbAccount = () => {
-    setFbSaving(true);
+  const savePage = () => {
+    setPageSaving(true);
     const bmId = Number(bm.id);
-    const payload = { ...fbForm };
+    const payload = { ...pageForm };
 
-    if (editingFbId) {
-      apiClient.put(`/business-managers/${bmId}/facebook-accounts/${editingFbId}`, payload)
+    if (editingPageId) {
+      apiClient.put(`/business-managers/${bmId}/pages/${editingPageId}`, payload)
         .then(res => {
-          const updated = mapFbAccount(res.data);
-          setFbAccounts(prev => prev.map(a => a.id === editingFbId ? updated : a));
-          setShowFbForm(false);
+          const updated = mapPage(res.data);
+          setPages(prev => prev.map(p => p.id === editingPageId ? updated : p));
+          setShowPageForm(false);
         })
-        .finally(() => setFbSaving(false));
+        .finally(() => setPageSaving(false));
     } else {
-      apiClient.post(`/business-managers/${bmId}/facebook-accounts`, payload)
+      apiClient.post(`/business-managers/${bmId}/pages`, payload)
         .then(res => {
-          const created = mapFbAccount(res.data);
-          setFbAccounts(prev => [created, ...prev]);
-          setShowFbForm(false);
+          const created = mapPage(res.data);
+          setPages(prev => [created, ...prev]);
+          setShowPageForm(false);
         })
-        .finally(() => setFbSaving(false));
+        .finally(() => setPageSaving(false));
     }
   };
 
-  const deleteFbAccount = (id: string) => {
-    setFbAccounts(prev => prev.filter(a => a.id !== id));
-    apiClient.delete(`/business-managers/${Number(bm.id)}/facebook-accounts/${id}`);
+  const deletePage = (id: string) => {
+    setPages(prev => prev.filter(p => p.id !== id));
+    apiClient.delete(`/business-managers/${Number(bm.id)}/pages/${id}`);
   };
-
-  const fbFormFields = [
-    { key: 'name', label: 'Name', icon: UserCheck, type: 'text', placeholder: 'Account nickname', required: true },
-    { key: 'token', label: 'Token', icon: Key, type: 'text', placeholder: 'EAAB...', required: true },
-    { key: 'useragent', label: 'User Agent', icon: Globe, type: 'text', placeholder: 'Mozilla/5.0...', required: true },
-    { key: 'proxy', label: 'Proxy', icon: Globe, type: 'text', placeholder: 'http://user:pass@host:port', required: false },
-    { key: 'group_name', label: 'Group', icon: Users, type: 'text', placeholder: 'Group name', required: false },
-    { key: 'cookie', label: 'Cookie', icon: UserCheck, type: 'text', placeholder: 'c_user=...;xs=...', required: false },
-  ];
 
   return (
     <>
@@ -972,14 +952,25 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                 )}
 
                 {activeTab === 'pages' && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <motion.button
+                      onClick={() => openPageForm()}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 text-sky-400 text-sm font-medium hover:bg-sky-500/15 hover:border-sky-500/30 transition-default"
+                    >
+                      <Plus className="w-4 h-4" strokeWidth={1.5} />
+                      Add Facebook Page
+                    </motion.button>
+
                     {filteredPages.map((page, i) => (
                       <motion.div
                         key={page.id}
+                        layout
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.03, duration: 0.3 }}
-                        className="group flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default cursor-pointer"
+                        className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default"
                       >
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-white/[0.06] flex items-center justify-center shrink-0">
                           <Newspaper className="w-5 h-5 text-white/40" strokeWidth={1.5} />
@@ -987,18 +978,39 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
                           <div className="sm:col-span-2 min-w-0">
                             <p className="text-sm font-medium text-white/80 truncate">{page.name}</p>
-                            <p className="text-[11px] text-white/25 font-[425] mt-0.5">{page.category}</p>
+                            <p className="text-[11px] text-white/25 font-[425] mt-0.5 truncate">
+                              {page.category}
+                              {page.group_name && <span className="ml-2 text-white/15">· {page.group_name}</span>}
+                            </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-white/30 font-[425]">Followers</p>
-                            <p className="text-sm font-semibold text-white/80">{formatNumber(page.followers)}</p>
+                            <p className="text-xs text-white/30 font-[425]">Threshold</p>
+                            <p className="text-sm font-semibold text-white/80">{formatCurrency(page.notify_balance_threshold, 'USD')}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-white/30 font-[425]">Engaged</p>
-                            <p className="text-sm font-semibold text-white/80">{formatNumber(page.engaged)}</p>
+                            <p className="text-xs text-white/30 font-[425]">Cooldown</p>
+                            <p className="text-sm font-semibold text-white/80">{page.notify_cooldown_minutes}m</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
+
+                        <div className="hidden sm:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            onClick={() => openPageForm(page)}
+                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-sky-500/10 border border-white/[0.06] hover:border-sky-500/20 flex items-center justify-center transition-default group/btn"
+                            title="Edit"
+                          >
+                            <Settings2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-sky-400 transition-default" strokeWidth={1.5} />
+                          </button>
+                          <button
+                            onClick={() => deletePage(page.id)}
+                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
+                            title="Remove"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
                               page.status === 'published'
@@ -1013,13 +1025,13 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                             )}
                             {page.status}
                           </span>
-                          <ChevronRight className="w-4 h-4 text-white/15 group-hover:text-white/30 transition-default" strokeWidth={1.5} />
                         </div>
                       </motion.div>
                     ))}
                     {filteredPages.length === 0 && (
                       <div className="text-center py-12">
-                        <p className="text-sm text-white/20 font-[425]">No pages match your search.</p>
+                        <Newspaper className="w-12 h-12 mx-auto text-white/[0.08] mb-3" strokeWidth={1} />
+                        <p className="text-sm text-white/20 font-[425]">No pages yet. Add one with a token to get started.</p>
                       </div>
                     )}
                   </div>
@@ -1120,94 +1132,6 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                     {filteredMembers.length === 0 && (
                       <div className="text-center py-12">
                         <p className="text-sm text-white/20 font-[425]">No team members match your search.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'facebook-accounts' && (
-                  <div className="space-y-3">
-                    <motion.button
-                      onClick={() => openFbForm()}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 text-blue-400 text-sm font-medium hover:bg-blue-500/15 hover:border-blue-500/30 transition-default"
-                    >
-                      <Plus className="w-4 h-4" strokeWidth={1.5} />
-                      Add Facebook Account
-                    </motion.button>
-
-                    {filteredFbAccounts.map((account, i) => (
-                      <motion.div
-                        key={account.id}
-                        layout
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.03, duration: 0.3 }}
-                        className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-white/[0.06] flex items-center justify-center shrink-0">
-                          <UserCheck className="w-5 h-5 text-white/40" strokeWidth={1.5} />
-                        </div>
-                        <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
-                          <div className="sm:col-span-2 min-w-0">
-                            <p className="text-sm font-medium text-white/80 truncate">{account.name}</p>
-                            {account.group_name && (
-                              <p className="text-[11px] text-white/25 font-[425] mt-0.5 truncate">
-                                <Users className="w-3 h-3 inline mr-1" strokeWidth={1.5} />
-                                {account.group_name}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-white/30 font-[425]">Threshold</p>
-                            <p className="text-sm font-semibold text-white/80">{formatCurrency(account.notify_balance_threshold, 'USD')}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-white/30 font-[425]">Cooldown</p>
-                            <p className="text-sm font-semibold text-white/80">{account.notify_cooldown_minutes}m</p>
-                          </div>
-                        </div>
-
-                        <div className="hidden sm:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <button
-                            onClick={() => openFbForm(account)}
-                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-blue-500/10 border border-white/[0.06] hover:border-blue-500/20 flex items-center justify-center transition-default group/btn"
-                            title="Edit"
-                          >
-                            <Settings2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-blue-400 transition-default" strokeWidth={1.5} />
-                          </button>
-                          <button
-                            onClick={() => deleteFbAccount(account.id)}
-                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
-                            title="Remove"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                              account.status === 'active'
-                                ? 'bg-emerald-500/10 text-emerald-400'
-                                : 'bg-white/[0.05] text-white/30'
-                            }`}
-                          >
-                            {account.status === 'active' ? (
-                              <PlayCircle className="w-3 h-3" strokeWidth={1.5} />
-                            ) : (
-                              <PauseCircle className="w-3 h-3" strokeWidth={1.5} />
-                            )}
-                            {account.status}
-                          </span>
-                        </div>
-                      </motion.div>
-                    ))}
-                    {filteredFbAccounts.length === 0 && (
-                      <div className="text-center py-12">
-                        <UserCheck className="w-12 h-12 mx-auto text-white/[0.08] mb-3" strokeWidth={1} />
-                        <p className="text-sm text-white/20 font-[425]">No Facebook accounts yet. Add one to get started.</p>
                       </div>
                     )}
                   </div>
@@ -1332,7 +1256,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showFbForm && (
+        {showPageForm && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1344,7 +1268,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowFbForm(false)}
+              onClick={() => setShowPageForm(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
 
@@ -1358,20 +1282,20 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               <div className="overflow-y-auto max-h-[85vh] p-6 pb-8 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 border border-blue-500/20 flex items-center justify-center">
-                      <UserCheck className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-500/20 flex items-center justify-center">
+                      <Newspaper className="w-5 h-5 text-sky-400" strokeWidth={1.5} />
                     </div>
                     <div>
                       <h2 className="text-lg font-semibold text-white/90">
-                        {editingFbId ? 'Edit Account' : 'Add Facebook Account'}
+                        {editingPageId ? 'Edit Page' : 'Add Facebook Page'}
                       </h2>
                       <p className="text-sm text-white/30 font-[425]">
-                        {editingFbId ? 'Update the account details below.' : 'Enter the account credentials and notification preferences.'}
+                        {editingPageId ? 'Update the page details and credentials below.' : 'Enter the page info and account credentials.'}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowFbForm(false)}
+                    onClick={() => setShowPageForm(false)}
                     className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
                   >
                     <X className="w-4 h-4 text-white/50" strokeWidth={1.5} />
@@ -1379,8 +1303,61 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Credentials</p>
-                  {fbFormFields.map(field => (
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Page Info</p>
+                  <div key="name">
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      Page Name <span className="text-titans-accent">*</span>
+                    </label>
+                    <div className="relative">
+                      <Newspaper className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        value={pageForm.name}
+                        onChange={e => setPageForm({ ...pageForm, name: e.target.value })}
+                        placeholder="My Business Page"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+                  <div key="page_id" className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Page ID</label>
+                      <div className="relative">
+                        <Hash className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={pageForm.page_id}
+                          onChange={e => setPageForm({ ...pageForm, page_id: e.target.value })}
+                          placeholder="123456789"
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Category</label>
+                      <div className="relative">
+                        <Globe className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={pageForm.category}
+                          onChange={e => setPageForm({ ...pageForm, category: e.target.value })}
+                          placeholder="Business"
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Facebook Account Credentials</p>
+                  {[
+                    { key: 'token', label: 'Token', icon: Key, placeholder: 'EAAB...', required: true },
+                    { key: 'useragent', label: 'User Agent', icon: Globe, placeholder: 'Mozilla/5.0...', required: true },
+                    { key: 'proxy', label: 'Proxy', icon: Globe, placeholder: 'http://user:pass@host:port', required: false },
+                    { key: 'group_name', label: 'Group', icon: Users, placeholder: 'Group name', required: false },
+                    { key: 'cookie', label: 'Cookie', icon: UserCheck, placeholder: 'c_user=...;xs=...', required: false },
+                  ].map(field => (
                     <div key={field.key}>
                       <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
                         {field.label} {field.required && <span className="text-titans-accent">*</span>}
@@ -1388,11 +1365,11 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       <div className="relative">
                         <field.icon className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
                         <input
-                          type={field.type}
-                          value={(fbForm as any)[field.key]}
-                          onChange={e => setFbForm({ ...fbForm, [field.key]: e.target.value })}
+                          type="text"
+                          value={(pageForm as any)[field.key]}
+                          onChange={e => setPageForm({ ...pageForm, [field.key]: e.target.value })}
                           placeholder={field.placeholder}
-                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-blue-500/50 focus:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.3)] transition-default"
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
                         />
                       </div>
                     </div>
@@ -1413,10 +1390,10 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         type="number"
                         min={0}
                         step={0.01}
-                        value={fbForm.notify_balance_threshold}
-                        onChange={e => setFbForm({ ...fbForm, notify_balance_threshold: parseFloat(e.target.value) || 0 })}
+                        value={pageForm.notify_balance_threshold}
+                        onChange={e => setPageForm({ ...pageForm, notify_balance_threshold: parseFloat(e.target.value) || 0 })}
                         placeholder="0.00"
-                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-blue-500/50 focus:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.3)] transition-default"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
                       />
                     </div>
                   </div>
@@ -1429,9 +1406,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                     <input
                       type="number"
                       min={1}
-                      value={fbForm.notify_cooldown_minutes}
-                      onChange={e => setFbForm({ ...fbForm, notify_cooldown_minutes: parseInt(e.target.value) || 60 })}
-                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-blue-500/50 focus:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.3)] transition-default"
+                      value={pageForm.notify_cooldown_minutes}
+                      onChange={e => setPageForm({ ...pageForm, notify_cooldown_minutes: parseInt(e.target.value) || 60 })}
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
                     />
                   </div>
 
@@ -1441,38 +1418,38 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       Notification Types
                     </p>
                     <Toggle
-                      value={fbForm.notify_moderation}
-                      onChange={v => setFbForm({ ...fbForm, notify_moderation: v })}
+                      value={pageForm.notify_moderation}
+                      onChange={v => setPageForm({ ...pageForm, notify_moderation: v })}
                       label="Moderation notifications"
                     />
                     <Toggle
-                      value={fbForm.notify_cabinet_status}
-                      onChange={v => setFbForm({ ...fbForm, notify_cabinet_status: v })}
+                      value={pageForm.notify_cabinet_status}
+                      onChange={v => setPageForm({ ...pageForm, notify_cabinet_status: v })}
                       label="Cabinet status notices"
                     />
                     <Toggle
-                      value={fbForm.notify_billing}
-                      onChange={v => setFbForm({ ...fbForm, notify_billing: v })}
+                      value={pageForm.notify_billing}
+                      onChange={v => setPageForm({ ...pageForm, notify_billing: v })}
                       label="Billing notices"
                     />
                   </div>
                 </div>
 
                 <motion.button
-                  onClick={saveFbAccount}
-                  disabled={fbSaving || !fbForm.name || !fbForm.token || !fbForm.useragent}
+                  onClick={savePage}
+                  disabled={pageSaving || !pageForm.name || !pageForm.token || !pageForm.useragent}
                   whileTap={{ scale: 0.97 }}
-                  className="relative w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
+                  className="relative w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-medium shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30 hover:from-sky-600 hover:to-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
                 >
-                  {fbSaving ? (
+                  {pageSaving ? (
                     <span className="flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
-                      {editingFbId ? 'Updating...' : 'Adding...'}
+                      {editingPageId ? 'Updating...' : 'Adding...'}
                     </span>
                   ) : (
                     <span className="flex items-center justify-center gap-2">
                       <Save className="w-4 h-4" strokeWidth={1.5} />
-                      {editingFbId ? 'Update Account' : 'Add Account'}
+                      {editingPageId ? 'Update Page' : 'Add Page'}
                     </span>
                   )}
                 </motion.button>
