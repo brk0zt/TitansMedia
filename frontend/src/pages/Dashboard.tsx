@@ -73,10 +73,10 @@ const pageTransition = {
 };
 
 const mapBmFromApi = (item: any): BusinessManager => ({
-  id: String(item.id),
-  name: item.name,
-  businessId: item.business_id,
-  verified: item.verified,
+  id: String(item.id ?? ''),
+  name: item.name ?? '',
+  businessId: item.business_id ?? '',
+  verified: item.verified ?? false,
   adAccountCount: item.ad_account_count ?? 0,
   pageCount: item.page_count ?? 0,
   userCount: item.user_count ?? 0,
@@ -124,8 +124,8 @@ export const Dashboard: React.FC = () => {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(b =>
-        b.name.toLowerCase().includes(q) ||
-        b.businessId.toLowerCase().includes(q)
+        b.name?.toLowerCase().includes(q) ||
+        b.businessId?.toLowerCase().includes(q)
       );
     }
     if (filterVerified === 'verified') list = list.filter(b => b.verified);

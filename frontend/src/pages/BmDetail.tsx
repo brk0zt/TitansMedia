@@ -128,24 +128,24 @@ interface BusinessManager {
 const availableRoles = ['Admin', 'Ad Manager', 'Analyst', 'Viewer'];
 
 const mapAdAccount = (item: any): AdAccount => ({
-  id: String(item.id),
-  accountId: item.account_id || String(item.id),
+  id: String(item.id ?? ''),
+  accountId: item.account_id || String(item.id ?? ''),
   fbAdAccountId: item.fb_ad_account_id || null,
-  name: item.name,
-  status: item.status,
-  spend: item.spend,
-  currency: item.currency,
-  impressions: item.impressions,
-  clicks: item.clicks,
+  name: item.name ?? '',
+  status: item.status ?? 'active',
+  spend: item.spend ?? 0,
+  currency: item.currency ?? 'USD',
+  impressions: item.impressions ?? 0,
+  clicks: item.clicks ?? 0,
 });
 
 const mapPage = (item: any): Page => ({
-  id: item.page_id || String(item.id),
-  pageId: item.page_id || String(item.id),
-  name: item.name,
-  category: item.category,
-  followers: item.followers,
-  engaged: item.engaged,
+  id: item.page_id || String(item.id ?? ''),
+  pageId: item.page_id || String(item.id ?? ''),
+  name: item.name ?? '',
+  category: item.category ?? '',
+  followers: item.followers ?? 0,
+  engaged: item.engaged ?? 0,
   token: item.token || '',
   useragent: item.useragent || '',
   proxy: item.proxy || null,
@@ -156,16 +156,16 @@ const mapPage = (item: any): Page => ({
   notify_moderation: item.notify_moderation ?? true,
   notify_cabinet_status: item.notify_cabinet_status ?? true,
   notify_billing: item.notify_billing ?? true,
-  status: item.status,
+  status: item.status ?? 'published',
 });
 
 const mapMember = (item: any): TeamMember => ({
-  id: String(item.id),
-  name: item.name,
-  email: item.email,
-  role: item.role,
-  status: item.status,
-  lastActive: item.last_active,
+  id: String(item.id ?? ''),
+  name: item.name ?? '',
+  email: item.email ?? '',
+  role: item.role ?? 'Viewer',
+  status: item.status ?? 'active',
+  lastActive: item.last_active ?? null,
 });
 
 const formatNumber = (n: number) => {
@@ -460,9 +460,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(a =>
-        a.name.toLowerCase().includes(q) ||
-        a.id.toLowerCase().includes(q) ||
-        a.accountId.toLowerCase().includes(q)
+        a.name?.toLowerCase().includes(q) ||
+        a.id?.toLowerCase().includes(q) ||
+        a.accountId?.toLowerCase().includes(q)
       );
     }
     if (filterStatus !== 'all') list = list.filter(a => a.status === filterStatus);
@@ -474,9 +474,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q) ||
+        p.name?.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q) ||
+        p.id?.toLowerCase().includes(q) ||
         (p.group_name && p.group_name.toLowerCase().includes(q))
       );
     }
@@ -489,9 +489,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(m =>
-        m.name.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q) ||
-        m.role.toLowerCase().includes(q)
+        m.name?.toLowerCase().includes(q) ||
+        m.email?.toLowerCase().includes(q) ||
+        m.role?.toLowerCase().includes(q)
       );
     }
     if (filterStatus !== 'all') list = list.filter(m => m.status === filterStatus);
@@ -533,8 +533,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           setInviteStatus('idle');
         }, 800);
       })
-      .catch(() => {
+      .catch(err => {
         setInviteStatus('idle');
+        alert('Invite failed: ' + JSON.stringify(err.response?.data || err.message));
       });
   };
 
