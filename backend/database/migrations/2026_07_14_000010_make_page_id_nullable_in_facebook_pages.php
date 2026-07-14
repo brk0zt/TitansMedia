@@ -1,22 +1,18 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('facebook_pages', function (Blueprint $table) {
-            $table->string('page_id', 64)->nullable()->change();
-        });
+        DB::statement('ALTER TABLE facebook_pages ALTER COLUMN page_id DROP NOT NULL');
     }
 
     public function down(): void
     {
-        Schema::table('facebook_pages', function (Blueprint $table) {
-            $table->string('page_id', 64')->nullable(false)->change();
-        });
+        DB::statement('ALTER TABLE facebook_pages ALTER COLUMN page_id SET NOT NULL');
     }
 };
