@@ -23,6 +23,16 @@ fullstack-code-review/
 extracted_skill/
 Mühendislik*
 README (4).md
+eng-practices-master/
+motion-main/.yarn/
+*.log
+
+# Generated/package dirs (all levels)
+node_modules/
+.yarn/
+.pnp.*
+.yarn/**
+.cache/
 
 # ==========================================
 # BACKEND (Laravel 11) Ignore Rules
