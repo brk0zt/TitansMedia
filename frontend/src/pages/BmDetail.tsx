@@ -585,6 +585,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           setPages(prev => [created, ...prev]);
           setShowPageForm(false);
         })
+        .catch(err => {
+          alert('Server error: ' + JSON.stringify(err.response?.data || err.message));
+        })
         .finally(() => setPageSaving(false));
     }
   };
