@@ -12,20 +12,20 @@ const AnimatedSearchBar: React.FC<Props> = ({ value, onChange, placeholder = 'Se
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className={"relative flex items-center justify-center " + className}>
+    <div className={"relative flex items-center justify-start " + className}>
       <div className="relative group cursor-text" onClick={() => inputRef.current?.focus()}>
         <div className="relative p-[4px] rounded-xl overflow-hidden">
-          <div className="absolute inset-0 rounded-xl opacity-70 blur-[3px] pointer-events-none
+          <div className="absolute inset-0 rounded-xl opacity-[0.56] blur-[3px] pointer-events-none
                           bg-[conic-gradient(from_0deg,#e11d48,#6b7280,#e11d48,#6b7280,#e11d48)]
-                          animate-spin-slow
-                          group-hover:animate-[spin_2s_linear_infinite]
-                          group-focus-within:animate-[spin_1s_linear_infinite]" />
-          <div className="absolute inset-0 rounded-xl opacity-60 blur-[2px] pointer-events-none
+                          animate-[spin_8s_linear_infinite]
+                          group-hover:animate-[spin_4s_linear_infinite]
+                          group-focus-within:animate-[spin_2s_linear_infinite]" />
+          <div className="absolute inset-0 rounded-xl opacity-[0.48] blur-[2px] pointer-events-none
                           bg-[conic-gradient(from_90deg,#be123c,#4b5563,#be123c,#4b5563,#be123c)]
-                          animate-[spin_6s_linear_infinite_reverse]" />
-          <div className="absolute inset-0 rounded-xl opacity-50 blur-[1px] pointer-events-none
+                          animate-[spin_12s_linear_infinite_reverse]" />
+          <div className="absolute inset-0 rounded-xl opacity-[0.40] blur-[1px] pointer-events-none
                           bg-[conic-gradient(from_180deg,#f87171,#d1d5db,#f87171,#d1d5db,#f87171)]
-                          animate-[spin_3s_linear_infinite]" />
+                          animate-[spin_6s_linear_infinite]" />
           <div className="relative bg-[#09090B] rounded-lg">
             <input
               ref={inputRef}
@@ -57,7 +57,7 @@ const AnimatedSearchBar: React.FC<Props> = ({ value, onChange, placeholder = 'Se
               className="absolute right-1 top-1/2 -translate-y-1/2 h-[36px] w-[36px] overflow-hidden rounded-lg
                           before:absolute before:content-[''] before:w-[600px] before:h-[600px] before:bg-no-repeat before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:rotate-90
                           before:bg-[conic-gradient(rgba(0,0,0,0),#e11d48,rgba(0,0,0,0)_50%,rgba(0,0,0,0)_50%,#6b7280,rgba(0,0,0,0)_100%)]
-                          before:brightness-135 before:animate-spin-slow"
+                          before:brightness-135 before:animate-[spin_8s_linear_infinite]"
             >
               <div className="flex items-center justify-center z-[2] h-full w-full [isolation:isolate] overflow-hidden rounded-lg bg-gradient-to-b from-[#161329] via-black to-[#1d1b4b] border border-transparent">
                 <svg preserveAspectRatio="none" height="22" width="22" viewBox="4.8 4.56 14.832 15.408" fill="none">
