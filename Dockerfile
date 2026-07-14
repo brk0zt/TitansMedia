@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN composer install --no-dev --no-audit --optimize-autoloader
+ENV COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_DISABLE_NETWORK_AUDIT=1
+RUN composer install --no-dev --optimize-autoloader
 
 EXPOSE 8000
 
