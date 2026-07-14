@@ -145,61 +145,67 @@ class DatabaseSeeder extends Seeder
         }
 
         foreach (self::BM_DATA as $bmItem) {
-            $bm = BusinessManager::create([
-                'user_id' => $user->id,
-                'name' => $bmItem['name'],
-                'business_id' => $bmItem['business_id'],
-                'verified' => $bmItem['verified'],
-                'balance' => $bmItem['balance'],
-                'currency' => $bmItem['currency'],
-                'overdue' => $bmItem['overdue'],
-            ]);
+            $bm = BusinessManager::updateOrCreate(
+                ['business_id' => $bmItem['business_id']],
+                [
+                    'user_id' => $user->id,
+                    'name' => $bmItem['name'],
+                    'verified' => $bmItem['verified'],
+                    'balance' => $bmItem['balance'],
+                    'currency' => $bmItem['currency'],
+                    'overdue' => $bmItem['overdue'],
+                ]
+            );
 
             foreach ($bmItem['ad_accounts'] as $acct) {
-                AdAccount::create([
-                    'business_manager_id' => $bm->id,
-                    'account_id' => $acct['account_id'],
-                    'fb_ad_account_id' => $acct['fb_ad_account_id'],
-                    'name' => $acct['name'],
-                    'status' => $acct['status'],
-                    'spend' => $acct['spend'],
-                    'impressions' => $acct['impressions'],
-                    'clicks' => $acct['clicks'],
-                ]);
+                AdAccount::updateOrCreate(
+                    ['account_id' => $acct['account_id'], 'business_manager_id' => $bm->id],
+                    [
+                        'fb_ad_account_id' => $acct['fb_ad_account_id'],
+                        'name' => $acct['name'],
+                        'status' => $acct['status'],
+                        'spend' => $acct['spend'],
+                        'impressions' => $acct['impressions'],
+                        'clicks' => $acct['clicks'],
+                    ]
+                );
             }
 
             foreach ($bmItem['pages'] as $pg) {
-                FacebookPage::create([
-                    'business_manager_id' => $bm->id,
-                    'page_id' => $pg['page_id'],
-                    'name' => $pg['name'],
-                    'category' => $pg['category'],
-                    'followers' => $pg['followers'],
-                    'engaged' => $pg['engaged'],
-                ]);
+                FacebookPage::updateOrCreate(
+                    ['page_id' => $pg['page_id'], 'business_manager_id' => $bm->id],
+                    [
+                        'name' => $pg['name'],
+                        'category' => $pg['category'],
+                        'followers' => $pg['followers'],
+                        'engaged' => $pg['engaged'],
+                    ]
+                );
             }
 
             foreach ($bmItem['members'] as $member) {
-                BmTeamMember::create([
-                    'business_manager_id' => $bm->id,
-                    'name' => $member['name'],
-                    'email' => $member['email'],
-                    'role' => $member['role'],
-                    'status' => 'active',
-                    'last_active_at' => Carbon::parse($member['last_active_at']),
-                ]);
+                BmTeamMember::updateOrCreate(
+                    ['email' => $member['email'], 'business_manager_id' => $bm->id],
+                    [
+                        'name' => $member['name'],
+                        'role' => $member['role'],
+                        'status' => 'active',
+                        'last_active_at' => Carbon::parse($member['last_active_at']),
+                    ]
+                );
             }
         }
 
         foreach (self::PROJECT_DATA as $projItem) {
-            $project = Project::create([
-                'user_id' => $user->id,
-                'name' => $projItem['name'],
-                'description' => $projItem['description'],
-                'status' => $projItem['status'],
-                'estimated_completion' => Carbon::parse($projItem['estimated_completion']),
-                'risk_score' => $projItem['risk_score'],
-            ]);
+            $project = Project::updateOrCreate(
+                ['name' => $projItem['name'], 'user_id' => $user->id],
+                [
+                    'description' => $projItem['description'],
+                    'status' => $projItem['status'],
+                    'estimated_completion' => Carbon::parse($projItem['estimated_completion']),
+                    'risk_score' => $projItem['risk_score'],
+                ]
+            );
 
             foreach ($projItem['tasks'] as $taskItem) {
                 $data = [
@@ -213,7 +219,10 @@ class DatabaseSeeder extends Seeder
                 if (isset($taskItem['completed_at'])) {
                     $data['completed_at'] = Carbon::parse($taskItem['completed_at']);
                 }
-                Task::create($data);
+                Task::updateOrCreate(
+                    ['title' => $taskItem['title'], 'project_id' => $project->id],
+                    $data
+                );
             }
         }
 
