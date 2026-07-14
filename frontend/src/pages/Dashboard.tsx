@@ -12,18 +12,15 @@ import {
   Users,
   Newspaper,
   BarChart3,
-  ChevronDown,
   Loader2,
+  Search,
+  SlidersHorizontal,
+  CalendarDays,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
 import BmDetail from './BmDetail';
-
-interface BmFinancial {
-  balance: number;
-  currency: string;
-  overdue: number;
-}
 
 interface BusinessManager {
   id: string;
@@ -33,14 +30,17 @@ interface BusinessManager {
   adAccountCount: number;
   pageCount: number;
   userCount: number;
-  financial: BmFinancial;
+  balance: number;
+  currency: string;
+  overdue: number;
+  createdAt: string;
 }
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.07, delayChildren: 0.15 },
+    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
   },
 };
 
@@ -57,6 +57,14 @@ const cardVariants = {
 const formatCurrency = (amount: number, currency: string) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2 }).format(amount);
 
+const formatDate = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return '';
+  }
+};
+
 const pageTransition = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -72,7 +80,10 @@ const mapBmFromApi = (item: any): BusinessManager => ({
   adAccountCount: item.ad_account_count ?? 0,
   pageCount: item.page_count ?? 0,
   userCount: item.user_count ?? 0,
-  financial: item.financial ?? { balance: item.balance ?? 0, currency: item.currency ?? 'USD', overdue: item.overdue ?? 0 },
+  balance: item.financial?.balance ?? item.balance ?? 0,
+  currency: item.financial?.currency ?? item.currency ?? 'USD',
+  overdue: item.financial?.overdue ?? item.overdue ?? 0,
+  createdAt: item.created_at ?? '',
 });
 
 export const Dashboard: React.FC = () => {
@@ -81,6 +92,9 @@ export const Dashboard: React.FC = () => {
   const [bms, setBms] = React.useState<BusinessManager[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  const [search, setSearch] = React.useState('');
+  const [filterVerified, setFilterVerified] = React.useState<'all' | 'verified' | 'unverified'>('all');
 
   React.useEffect(() => {
     let cancelled = false;
@@ -105,14 +119,28 @@ export const Dashboard: React.FC = () => {
     [selectedBmId, bms]
   );
 
+  const filteredBms = React.useMemo(() => {
+    let list = bms;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(b =>
+        b.name.toLowerCase().includes(q) ||
+        b.businessId.toLowerCase().includes(q)
+      );
+    }
+    if (filterVerified === 'verified') list = list.filter(b => b.verified);
+    if (filterVerified === 'unverified') list = list.filter(b => !b.verified);
+    return list;
+  }, [search, filterVerified, bms]);
+
   const summaryTotals = React.useMemo(() => {
     const totals = { adAccounts: 0, pages: 0, users: 0, balance: 0, overdue: 0 };
     bms.forEach(bm => {
       totals.adAccounts += bm.adAccountCount;
       totals.pages += bm.pageCount;
       totals.users += bm.userCount;
-      totals.balance += bm.financial.balance;
-      totals.overdue += bm.financial.overdue;
+      totals.balance += bm.balance;
+      totals.overdue += bm.overdue;
     });
     return totals;
   }, [bms]);
@@ -193,7 +221,7 @@ export const Dashboard: React.FC = () => {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex flex-wrap items-center gap-6 mb-8 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]"
+                    className="flex flex-wrap items-center gap-6 mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]"
                   >
                     {[
                       { icon: BarChart3, label: 'Ad Accounts', value: summaryTotals.adAccounts },
@@ -217,12 +245,46 @@ export const Dashboard: React.FC = () => {
                   </motion.div>
 
                   <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8"
+                  >
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Search by Business name or ID..."
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-white/[0.12] focus:shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_4px_24px_rgba(0,0,0,0.4)] transition-default"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <SlidersHorizontal className="w-4 h-4 text-white/25" strokeWidth={1.5} />
+                      {(['all', 'verified', 'unverified'] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setFilterVerified(f)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-[425] transition-default ${
+                            filterVerified === f
+                              ? 'bg-white/[0.08] text-white/80 border border-white/[0.1]'
+                              : 'text-white/30 hover:text-white/50'
+                          }`}
+                        >
+                          {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+
+                  <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
                   >
-                    {bms.map((bm) => (
+                    {filteredBms.map((bm) => (
                       <motion.div
                         key={bm.id}
                         variants={cardVariants}
@@ -264,6 +326,13 @@ export const Dashboard: React.FC = () => {
                             </span>
                           </div>
 
+                          {bm.createdAt && (
+                            <div className="flex items-center gap-1.5">
+                              <CalendarDays className="w-3.5 h-3.5 text-white/25" strokeWidth={1.5} />
+                              <span className="text-[11px] text-white/30 font-[425]">Created {formatDate(bm.createdAt)}</span>
+                            </div>
+                          )}
+
                           <div className="flex items-center gap-4 pt-1">
                             {[
                               { icon: BarChart3, label: 'Ads', count: bm.adAccountCount },
@@ -284,17 +353,17 @@ export const Dashboard: React.FC = () => {
                             <div className="flex items-center justify-between">
                               <span className="text-[11px] text-white/30 font-[425]">Balance</span>
                               <span className="text-xs font-semibold text-white/80">
-                                {formatCurrency(bm.financial.balance, bm.financial.currency)}
+                                {formatCurrency(bm.balance, bm.currency)}
                               </span>
                             </div>
-                            {bm.financial.overdue > 0 && (
+                            {bm.overdue > 0 && (
                               <div className="flex items-center justify-between">
                                 <span className="flex items-center gap-1 text-[11px] text-titans-accent/70 font-[425]">
                                   <AlertCircle className="w-3 h-3" strokeWidth={1.5} />
                                   Overdue
                                 </span>
                                 <span className="text-xs font-semibold text-titans-accent">
-                                  {formatCurrency(bm.financial.overdue, bm.financial.currency)}
+                                  {formatCurrency(bm.overdue, bm.currency)}
                                 </span>
                               </div>
                             )}
@@ -305,12 +374,22 @@ export const Dashboard: React.FC = () => {
                               <TrendingUp className="w-3 h-3" strokeWidth={1.5} />
                               {bm.verified ? 'Active' : 'Pending review'}
                             </div>
-                            <ChevronDown className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40 transition-default -rotate-90" strokeWidth={1.5} />
+                            <div className="flex items-center gap-1 text-[10px] text-titans-accent/40 group-hover:text-titans-accent/70 transition-default font-[425]">
+                              View details
+                              <ArrowRight className="w-3 h-3" strokeWidth={1.5} />
+                            </div>
                           </div>
                         </div>
                       </motion.div>
                     ))}
                   </motion.div>
+
+                  {filteredBms.length === 0 && (
+                    <div className="text-center py-16">
+                      <Building2 className="w-12 h-12 mx-auto text-white/[0.08] mb-4" strokeWidth={1} />
+                      <p className="text-sm text-white/20 font-[425]">No business managers match your criteria.</p>
+                    </div>
+                  )}
                 </>
               )}
             </main>
