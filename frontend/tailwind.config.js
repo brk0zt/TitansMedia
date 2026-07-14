@@ -53,6 +53,7 @@ export default {
         'fade-in': 'fade-in 0.5s ease-out',
         'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
         'shimmer': 'shimmer 2s linear infinite',
+        'spin-slow': 'spin 4s linear infinite',
       },
     },
   },

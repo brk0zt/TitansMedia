@@ -13,7 +13,6 @@ import {
   Newspaper,
   BarChart3,
   Loader2,
-  Search,
   SlidersHorizontal,
   CalendarDays,
   ArrowRight,
@@ -21,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
 import BmDetail from './BmDetail';
+import AnimatedSearchBar from '@/components/ui/AnimatedSearchBar';
 
 interface BusinessManager {
   id: string;
@@ -250,16 +250,7 @@ export const Dashboard: React.FC = () => {
                     transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
                     className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8"
                   >
-                    <div className="relative flex-1 max-w-md">
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Search by Business name or ID..."
-                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-white/[0.12] focus:shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_4px_24px_rgba(0,0,0,0.4)] transition-default"
-                      />
-                    </div>
+                    <AnimatedSearchBar value={search} onChange={setSearch} placeholder="Search by Business name or ID..." className="flex-1" />
                     <div className="flex items-center gap-3">
                       <SlidersHorizontal className="w-4 h-4 text-white/25" strokeWidth={1.5} />
                       {(['all', 'verified', 'unverified'] as const).map(f => (

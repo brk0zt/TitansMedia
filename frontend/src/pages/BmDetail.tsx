@@ -2,7 +2,6 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Search,
   SlidersHorizontal,
   BarChart3,
   Newspaper,
@@ -37,6 +36,7 @@ import {
   X,
 } from 'lucide-react';
 import apiClient from '../api/client';
+import AnimatedSearchBar from '@/components/ui/AnimatedSearchBar';
 
 interface BillingData {
   loading: boolean;
@@ -368,17 +368,6 @@ const defaultPageForm = {
   notify_billing: true,
 };
 
-const pageFormFields = [
-  { key: 'name', label: 'Page Name', icon: Newspaper, type: 'text', placeholder: 'My Business Page', required: true },
-  { key: 'page_id', label: 'Page ID', icon: Hash, type: 'text', placeholder: '123456789012345', required: false },
-  { key: 'category', label: 'Category', icon: Globe, type: 'text', placeholder: 'Business', required: false },
-  { key: 'token', label: 'Token', icon: Key, type: 'text', placeholder: 'EAAB...', required: true },
-  { key: 'useragent', label: 'User Agent', icon: Globe, type: 'text', placeholder: 'Mozilla/5.0...', required: true },
-  { key: 'proxy', label: 'Proxy', icon: Globe, type: 'text', placeholder: 'http://user:pass@host:port', required: false },
-  { key: 'group_name', label: 'Group', icon: Users, type: 'text', placeholder: 'Group name', required: false },
-  { key: 'cookie', label: 'Cookie', icon: UserCheck, type: 'text', placeholder: 'c_user=...;xs=...', required: false },
-];
-
 export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [activeTab, setActiveTab] = React.useState<TabId>('ad-accounts');
   const [search, setSearch] = React.useState('');
@@ -397,7 +386,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
 
   const [showAdForm, setShowAdForm] = React.useState(false);
   const [editingAdId, setEditingAdId] = React.useState<string | null>(null);
-  const [adForm, setAdForm] = React.useState({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' as const });
+  const [adForm, setAdForm] = React.useState<{ name: string; account_id: string; fb_ad_account_id: string; status: string }>({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' });
   const [adSaving, setAdSaving] = React.useState(false);
 
   const [selectedBillingId, setSelectedBillingId] = React.useState<string | null>(null);
@@ -755,16 +744,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
               className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6"
             >
-              <div className="relative flex-1 max-w-lg">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by name, ID, or email..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white/80 placeholder-white/20 focus:outline-none focus:border-white/[0.12] focus:shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_4px_24px_rgba(0,0,0,0.4)] transition-default"
-                />
-              </div>
+              <AnimatedSearchBar value={search} onChange={setSearch} placeholder="Search by name, ID, or email..." className="flex-1" />
 
               <div className="flex items-center gap-3">
                 <SlidersHorizontal className="w-4 h-4 text-white/25" strokeWidth={1.5} />

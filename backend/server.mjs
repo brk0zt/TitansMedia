@@ -20,14 +20,14 @@ const businessManagers = [
 
 const adAccounts = {
   1: [
-    { id: 1, account_id: 'act_123456', name: 'Titans Global Display', status: 'active', spend: 18450.00, currency: 'USD', impressions: 2450000, clicks: 48200, created_at: '2026-01-25T10:00:00Z' },
-    { id: 2, account_id: 'act_234567', name: 'Titans Social Pro', status: 'active', spend: 12380.00, currency: 'USD', impressions: 1890000, clicks: 35100, created_at: '2026-02-01T11:00:00Z' },
-    { id: 3, account_id: 'act_345678', name: 'Titans Retargeting', status: 'active', spend: 8950.00, currency: 'USD', impressions: 980000, clicks: 21400, created_at: '2026-02-15T09:00:00Z' },
-    { id: 4, account_id: 'act_456789', name: 'Titans Video Ads', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, created_at: '2026-03-01T08:00:00Z' },
-    { id: 5, account_id: 'act_567890', name: 'Titans Lead Gen', status: 'active', spend: 6500.00, currency: 'USD', impressions: 720000, clicks: 12800, created_at: '2026-03-10T14:00:00Z' },
-    { id: 6, account_id: 'act_678901', name: 'Titans DPA Catalog', status: 'active', spend: 4200.00, currency: 'USD', impressions: 510000, clicks: 8900, created_at: '2026-04-05T10:00:00Z' },
-    { id: 7, account_id: 'act_789012', name: 'Titans App Installs', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, created_at: '2026-04-20T12:00:00Z' },
-    { id: 8, account_id: 'act_890123', name: 'Titans Brand Awareness', status: 'active', spend: 3100.00, currency: 'USD', impressions: 410000, clicks: 6200, created_at: '2026-05-01T09:00:00Z' },
+    { id: 1, account_id: 'act_123456', name: 'Titans Global Display', status: 'active', spend: 18450.00, currency: 'USD', impressions: 2450000, clicks: 48200, fb_ad_account_id: 'act_123456', created_at: '2026-01-25T10:00:00Z' },
+    { id: 2, account_id: 'act_234567', name: 'Titans Social Pro', status: 'active', spend: 12380.00, currency: 'USD', impressions: 1890000, clicks: 35100, fb_ad_account_id: 'act_234567', created_at: '2026-02-01T11:00:00Z' },
+    { id: 3, account_id: 'act_345678', name: 'Titans Retargeting', status: 'active', spend: 8950.00, currency: 'USD', impressions: 980000, clicks: 21400, fb_ad_account_id: 'act_345678', created_at: '2026-02-15T09:00:00Z' },
+    { id: 4, account_id: 'act_456789', name: 'Titans Video Ads', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, fb_ad_account_id: null, created_at: '2026-03-01T08:00:00Z' },
+    { id: 5, account_id: 'act_567890', name: 'Titans Lead Gen', status: 'active', spend: 6500.00, currency: 'USD', impressions: 720000, clicks: 12800, fb_ad_account_id: 'act_567890', created_at: '2026-03-10T14:00:00Z' },
+    { id: 6, account_id: 'act_678901', name: 'Titans DPA Catalog', status: 'active', spend: 4200.00, currency: 'USD', impressions: 510000, clicks: 8900, fb_ad_account_id: 'act_678901', created_at: '2026-04-05T10:00:00Z' },
+    { id: 7, account_id: 'act_789012', name: 'Titans App Installs', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, fb_ad_account_id: null, created_at: '2026-04-20T12:00:00Z' },
+    { id: 8, account_id: 'act_890123', name: 'Titans Brand Awareness', status: 'active', spend: 3100.00, currency: 'USD', impressions: 410000, clicks: 6200, fb_ad_account_id: 'act_890123', created_at: '2026-05-01T09:00:00Z' },
   ],
 };
 
@@ -150,6 +150,16 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { data: bm });
   }
 
+  // BM: Facebook Accounts (redirect to pages for backwards compat)
+  const faMatch = path.match(/^\/api\/business-managers\/(\d+)\/facebook-accounts$/);
+  if (method === 'GET' && faMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(faMatch[1]);
+    const pages = facebookPages[bmId] || [];
+    return json(res, 200, { data: pages });
+  }
+
   // BM: Ad Accounts
   const aaMatch = path.match(/^\/api\/business-managers\/(\d+)\/ad-accounts$/);
   if (method === 'GET' && aaMatch) {
@@ -220,6 +230,44 @@ const server = http.createServer(async (req, res) => {
       if (idx !== -1) members.splice(idx, 1);
     }
     return json(res, 200, { message: 'Team member removed.' });
+  }
+
+  // Billing: GET /api/ad-accounts/{id}/billing
+  const billingMatch = path.match(/^\/api\/ad-accounts\/(\d+)\/billing$/);
+  if (method === 'GET' && billingMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const aaId = parseInt(billingMatch[1]);
+    let found = null;
+    for (const bmId in adAccounts) {
+      const acct = adAccounts[bmId].find(a => a.id === aaId);
+      if (acct) { found = acct; break; }
+    }
+    if (!found) return json(res, 404, { message: 'Not found.' });
+    return json(res, 200, {
+      id: found.id,
+      ad_account_id: found.account_id,
+      name: found.name,
+      facebook: {
+        balance: found.spend > 5000 ? 25000 : 8500,
+        spend: found.spend,
+        amount_spent: found.spend * 1.12,
+        account_status: found.status === 'active' ? 1 : 3,
+        currency: found.currency || 'USD',
+        business_name: 'Titans Media',
+        spend_cap: 100000,
+        budget_remaining: 100000 - found.spend,
+        daily_spend: Math.round(found.spend / 30),
+        min_campaign_group_spend_cap: 100,
+        disable_reason: found.status === 'disabled' ? 'USER_DISABLED_ACCOUNT' : null,
+      },
+      local: {
+        spend: found.spend,
+        impressions: found.impressions || 0,
+        clicks: found.clicks || 0,
+        currency: found.currency || 'USD',
+      },
+    });
   }
 
   json(res, 404, { message: 'Not found.' });
