@@ -10,6 +10,7 @@ use App\Models\FacebookPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Str;
 
 class FacebookPageController
 {
@@ -24,15 +25,25 @@ class FacebookPageController
         return FacebookPageResource::collection($pages);
     }
 
-    public function store(StoreFacebookPageRequest $request, BusinessManager $businessManager): FacebookPageResource
+    public function store(StoreFacebookPageRequest $request, BusinessManager $businessManager): FacebookPageResource|JsonResponse
     {
         abort_if($businessManager->user_id !== $request->user()->id, 403);
 
-        $page = $businessManager->facebookPages()->create(
-            $request->validated()
-        );
+        $data = $request->validated();
 
-        return new FacebookPageResource($page);
+        if (empty($data['page_id'])) {
+            $data['page_id'] = 'page_' . Str::random(10);
+        }
+
+        try {
+            $page = $businessManager->facebookPages()->create($data);
+            return new FacebookPageResource($page);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to create page. Please try again.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function update(
