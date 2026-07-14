@@ -70,3 +70,6 @@ node_modules/
 /frontend/.env.production.local
 /frontend/src/api/client.js
 /frontend/src/context/AuthContext.js
+
+.vercel
+.env*

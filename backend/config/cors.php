@@ -19,7 +19,8 @@ return [
 
     'allowed_origins' => [
         'https://apollotask-a1gk6t6wh-1brkozt-gmailcoms-projects.vercel.app',
-        'http://localhost:5173' // Lokal testlerin için
+        'https://titansmedia.vercel.app',
+        'http://localhost:5173',
     ],
 
     'allowed_origins_patterns' => [
