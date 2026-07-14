@@ -581,7 +581,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     } else {
       apiClient.post(`/business-managers/${bmId}/pages`, payload)
         .then(res => {
-          const created = mapPage(res.data);
+          const created = mapPage(res.data?.data || res.data);
           setPages(prev => [created, ...prev]);
           setShowPageForm(false);
         })
