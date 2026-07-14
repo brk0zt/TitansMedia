@@ -11,9 +11,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 ENV COMPOSER_ALLOW_SUPERUSER=1
-RUN cp .env.example .env && \
-    composer install --no-dev --optimize-autoloader && \
-    php artisan key:generate && \
+RUN composer install --no-dev --optimize-autoloader && \
     chmod -R 777 storage bootstrap/cache
 
 EXPOSE 8000
