@@ -106,7 +106,8 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateToLogi
         Breathing={true}
         startingGap={125}
         gradientColors={["#0A0A0A", "#e11d48", "#f87171", "#6b7280", "#be123c", "#4b5563", "#d1d5db"]}
-        gradientStops={[35, 50, 60, 70, 80, 90, 100]}
+        gradientStops={[47, 59, 67, 75, 83, 91, 100]}
+        containerClassName="-z-10"
       />
 
       <p className="relative z-10 text-lg text-gray-300 md:text-xl max-w-lg text-center mb-12 px-4">
@@ -117,7 +118,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigateToLogi
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-sm"
+        className="relative z-10 w-full max-w-sm"
       >
         <div className="relative overflow-hidden rounded-3xl bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] shadow-soft-lg">
           <div className="absolute inset-0 shimmer-bg animate-shimmer pointer-events-none" />
