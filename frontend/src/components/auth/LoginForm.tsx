@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import AnimatedGradientBackground from '@/components/ui/animated-gradient-background';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email address is required.').email('Invalid email address format.'),
@@ -18,14 +19,6 @@ interface LoginFormProps {
   onNavigateToRegister?: () => void;
   onNavigateToForgotPassword?: () => void;
 }
-
-const gradientOrbs = [
-  { size: 600, x: '20%', y: '10%', color: 'rgba(225,29,72,0.12)', delay: 0 },
-  { size: 500, x: '70%', y: '60%', color: 'rgba(225,29,72,0.08)', delay: 2 },
-  { size: 400, x: '40%', y: '80%', color: 'rgba(63,63,70,0.15)', delay: 4 },
-  { size: 350, x: '80%', y: '20%', color: 'rgba(225,29,72,0.06)', delay: 1 },
-  { size: 450, x: '10%', y: '70%', color: 'rgba(39,39,42,0.12)', delay: 3 },
-];
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onNavigateToRegister, onNavigateToForgotPassword }) => {
   const { login, error, clearError } = useAuth();
@@ -54,45 +47,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onNavigateToReg
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-titans-bg flex items-center justify-center p-4">
-      {/* Animated Gradient Mesh Orbs */}
-      {gradientOrbs.map((orb, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            width: orb.size,
-            height: orb.size,
-            background: `radial-gradient(circle, ${orb.color} 0%, transparent 70%)`,
-            left: orb.x,
-            top: orb.y,
-          }}
-          initial={{ x: 0, y: 0, scale: 1, opacity: 0 }}
-          animate={{
-            x: ['0%', '5%', '-3%', '2%', '0%'],
-            y: ['0%', '-4%', '6%', '-2%', '0%'],
-            scale: [1, 1.08, 0.95, 1.03, 1],
-            opacity: [0.6, 1, 0.7, 0.9, 0.6],
-          }}
-          transition={{
-            duration: 12 + i * 2,
-            delay: orb.delay,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
-
-      {/* Subtle grid overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.015]"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
-        }}
+    <div className="relative min-h-screen overflow-hidden bg-titans-bg flex flex-col items-center justify-center p-4">
+      <AnimatedGradientBackground
+        Breathing={true}
+        startingGap={125}
+        gradientColors={["#0A0A0A", "#e11d48", "#f87171", "#6b7280", "#be123c", "#4b5563", "#d1d5db"]}
+        gradientStops={[35, 50, 60, 70, 80, 90, 100]}
       />
 
-      {/* Glassmorphism Card */}
+      <p className="relative z-10 text-lg text-gray-300 md:text-xl max-w-lg text-center mb-12 px-4">
+        Manage your Facebook ad accounts, pages from one dashboard with AI support
+      </p>
+
       <motion.div
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
