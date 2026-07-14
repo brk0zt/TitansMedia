@@ -23,9 +23,9 @@ class DatabaseSeeder extends Seeder
             'currency' => 'USD',
             'overdue' => 0.00,
             'ad_accounts' => [
-                ['account_id' => 'ACT-001-MAIN', 'fb_ad_account_id' => null, 'name' => 'Titans Media Main', 'status' => 'active', 'spend' => 45000.00, 'impressions' => 2_500_000, 'clicks' => 125_000],
-                ['account_id' => 'ACT-002-PMAX', 'fb_ad_account_id' => null, 'name' => 'Titans Performance Max', 'status' => 'active', 'spend' => 32000.00, 'impressions' => 1_800_000, 'clicks' => 98_000],
-                ['account_id' => 'ACT-003-BRAND', 'fb_ad_account_id' => null, 'name' => 'Titans Brand Awareness', 'status' => 'active', 'spend' => 18000.00, 'impressions' => 3_200_000, 'clicks' => 45_000],
+                ['account_id' => 'ACT-001-MAIN', 'fb_ad_account_id' => '123456789012345', 'name' => 'Titans Media Main', 'status' => 'active', 'spend' => 45000.00, 'impressions' => 2_500_000, 'clicks' => 125_000],
+                ['account_id' => 'ACT-002-PMAX', 'fb_ad_account_id' => '234567890123456', 'name' => 'Titans Performance Max', 'status' => 'active', 'spend' => 32000.00, 'impressions' => 1_800_000, 'clicks' => 98_000],
+                ['account_id' => 'ACT-003-BRAND', 'fb_ad_account_id' => '345678901234567', 'name' => 'Titans Brand Awareness', 'status' => 'active', 'spend' => 18000.00, 'impressions' => 3_200_000, 'clicks' => 45_000],
             ],
             'pages' => [
                 ['page_id' => 'PG-001-TITANS', 'name' => 'Titans Media', 'category' => 'Media/News', 'followers' => 145_000, 'engaged' => 12_300],
@@ -48,8 +48,8 @@ class DatabaseSeeder extends Seeder
             'currency' => 'USD',
             'overdue' => 3200.00,
             'ad_accounts' => [
-                ['account_id' => 'ACT-101-QT', 'fb_ad_account_id' => null, 'name' => 'QT Launch Campaign', 'status' => 'active', 'spend' => 12000.00, 'impressions' => 890_000, 'clicks' => 43_000],
-                ['account_id' => 'ACT-102-QTR', 'fb_ad_account_id' => null, 'name' => 'QT Retargeting', 'status' => 'paused', 'spend' => 5000.00, 'impressions' => 340_000, 'clicks' => 21_000],
+                ['account_id' => 'ACT-101-QT', 'fb_ad_account_id' => '456789012345678', 'name' => 'QT Launch Campaign', 'status' => 'active', 'spend' => 12000.00, 'impressions' => 890_000, 'clicks' => 43_000],
+                ['account_id' => 'ACT-102-QTR', 'fb_ad_account_id' => '567890123456789', 'name' => 'QT Retargeting', 'status' => 'paused', 'spend' => 5000.00, 'impressions' => 340_000, 'clicks' => 21_000],
             ],
             'pages' => [
                 ['page_id' => 'PG-101-QTECH', 'name' => 'Quantum Tech Official', 'category' => 'Technology', 'followers' => 56_000, 'engaged' => 4_200],
@@ -68,8 +68,8 @@ class DatabaseSeeder extends Seeder
             'currency' => 'USD',
             'overdue' => 0.00,
             'ad_accounts' => [
-                ['account_id' => 'ACT-201-FL', 'fb_ad_account_id' => null, 'name' => 'FL Product Launch', 'status' => 'active', 'spend' => 22000.00, 'impressions' => 1_200_000, 'clicks' => 67_000],
-                ['account_id' => 'ACT-202-FLG', 'fb_ad_account_id' => null, 'name' => 'FL Lead Gen', 'status' => 'active', 'spend' => 15000.00, 'impressions' => 670_000, 'clicks' => 41_000],
+                ['account_id' => 'ACT-201-FL', 'fb_ad_account_id' => '678901234567890', 'name' => 'FL Product Launch', 'status' => 'active', 'spend' => 22000.00, 'impressions' => 1_200_000, 'clicks' => 67_000],
+                ['account_id' => 'ACT-202-FLG', 'fb_ad_account_id' => '789012345678901', 'name' => 'FL Lead Gen', 'status' => 'active', 'spend' => 15000.00, 'impressions' => 670_000, 'clicks' => 41_000],
             ],
             'pages' => [
                 ['page_id' => 'PG-201-FUSION', 'name' => 'Fusion Labs', 'category' => 'Science', 'followers' => 89_000, 'engaged' => 7_500],
