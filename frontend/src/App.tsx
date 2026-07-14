@@ -4,11 +4,14 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
+import ForgotPassword from './components/auth/ForgotPassword';
 import Dashboard from './pages/Dashboard';
+
+type AuthView = 'login' | 'register' | 'forgot-password';
 
 const App: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [currentView, setCurrentView] = useState<'login' | 'register'>('login');
+  const [currentView, setCurrentView] = useState<AuthView>('login');
 
   if (isLoading) {
     return (
@@ -32,14 +35,21 @@ const App: React.FC = () => {
 
   return (
     <>
-      {currentView === 'login' ? (
+      {currentView === 'login' && (
         <LoginForm
           onSuccess={() => {}}
           onNavigateToRegister={() => setCurrentView('register')}
+          onNavigateToForgotPassword={() => setCurrentView('forgot-password')}
         />
-      ) : (
+      )}
+      {currentView === 'register' && (
         <RegisterForm
           onSuccess={() => {}}
+          onNavigateToLogin={() => setCurrentView('login')}
+        />
+      )}
+      {currentView === 'forgot-password' && (
+        <ForgotPassword
           onNavigateToLogin={() => setCurrentView('login')}
         />
       )}

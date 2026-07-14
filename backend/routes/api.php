@@ -22,12 +22,23 @@ Route::get('/run-migrations', function () {
     }
 });
 
+Route::get('/run-seed', function () {
+    try {
+        Artisan::call('db:seed', ['--force' => true]);
+        return "Seed data başarıyla eklendi! Çıktı: " . Artisan::output();
+    } catch (\Exception $e) {
+        return "Bir hata oluştu: " . $e->getMessage();
+    }
+});
+
 // ==========================================
 // AUTHENTICATION ROUTES (Aggressive Rate Limiting)
 // ==========================================
 Route::middleware([AuthRateLimiter::class])->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 // ==========================================

@@ -12,6 +12,8 @@ interface AuthContextType {
   login: (credentials: Record<string, string>) => Promise<void>;
   register: (credentials: Record<string, string>) => Promise<void>;
   logout: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<{ reset_token?: string; email?: string; message: string }>;
+  resetPassword: (data: { email: string; token: string; password: string; password_confirmation: string }) => Promise<void>;
   clearError: () => void;
 }
 
@@ -23,7 +25,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Restore session from localStorage on initial render
   useEffect(() => {
     const storedToken = localStorage.getItem('apollo_token');
     const storedUser = localStorage.getItem('apollo_user');
@@ -35,7 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Sync state and handle auto-logout via window events
   useEffect(() => {
     const handleUnauthorized = () => {
       setUser(null);
@@ -53,7 +53,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
     try {
-      // Wrapped in aggressive AuthRateLimiter middleware on the server
       const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
       const { access_token, user: loggedUser } = response.data;
 
@@ -74,7 +73,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
     try {
-      // Wrapped in aggressive AuthRateLimiter middleware on the server
       const response = await apiClient.post<AuthResponse>('/auth/register', credentials);
       const { access_token, user: registeredUser } = response.data;
 
@@ -91,10 +89,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    setError(null);
+    try {
+      const response = await apiClient.post<{ reset_token?: string; email?: string; message: string }>('/auth/forgot-password', { email });
+      return response.data;
+    } catch (err) {
+      handleApiError(err);
+      throw err;
+    }
+  };
+
+  const resetPassword = async (data: { email: string; token: string; password: string; password_confirmation: string }) => {
+    setError(null);
+    try {
+      await apiClient.post('/auth/reset-password', data);
+    } catch (err) {
+      handleApiError(err);
+      throw err;
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
-      // Sends a POST /auth/logout to revoke current Sanctum token and append L1 telemetry
       await apiClient.post('/auth/logout');
     } catch (err) {
       console.error('Logout request failed, cleaning local session anyway...', err);
@@ -130,6 +148,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        forgotPassword,
+        resetPassword,
         clearError,
       }}
     >

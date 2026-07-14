@@ -16,6 +16,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 interface LoginFormProps {
   onSuccess?: () => void;
   onNavigateToRegister?: () => void;
+  onNavigateToForgotPassword?: () => void;
 }
 
 const gradientOrbs = [
@@ -26,7 +27,7 @@ const gradientOrbs = [
   { size: 450, x: '10%', y: '70%', color: 'rgba(39,39,42,0.12)', delay: 3 },
 ];
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onNavigateToRegister }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onNavigateToRegister, onNavigateToForgotPassword }) => {
   const { login, error, clearError } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -178,6 +179,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onNavigateToReg
                   </label>
                   <button
                     type="button"
+                    onClick={onNavigateToForgotPassword}
                     className="text-[11px] text-white/30 hover:text-white/60 transition-default"
                   >
                     Forgot?
