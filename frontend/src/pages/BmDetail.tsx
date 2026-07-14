@@ -395,6 +395,11 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [pageForm, setPageForm] = React.useState(defaultPageForm);
   const [pageSaving, setPageSaving] = React.useState(false);
 
+  const [showAdForm, setShowAdForm] = React.useState(false);
+  const [editingAdId, setEditingAdId] = React.useState<string | null>(null);
+  const [adForm, setAdForm] = React.useState({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' as const });
+  const [adSaving, setAdSaving] = React.useState(false);
+
   const [selectedBillingId, setSelectedBillingId] = React.useState<string | null>(null);
   const [billingCache, setBillingCache] = React.useState<Record<string, BillingData>>({});
 
@@ -600,6 +605,46 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     apiClient.delete(`/business-managers/${Number(bm.id)}/pages/${id}`);
   };
 
+  const openAdForm = (existing?: AdAccount) => {
+    if (existing) {
+      setEditingAdId(existing.id);
+      setAdForm({
+        name: existing.name,
+        account_id: existing.accountId,
+        fb_ad_account_id: existing.fbAdAccountId || '',
+        status: existing.status,
+      });
+    } else {
+      setEditingAdId(null);
+      setAdForm({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' });
+    }
+    setShowAdForm(true);
+  };
+
+  const saveAdAccount = () => {
+    setAdSaving(true);
+    const bmId = Number(bm.id);
+    const payload = { ...adForm };
+
+    if (editingAdId) {
+      apiClient.put(`/business-managers/${bmId}/ad-accounts/${editingAdId}`, payload)
+        .then(res => {
+          const updated = mapAdAccount(res.data.data ?? res.data);
+          setAdAccounts(prev => prev.map(a => a.id === editingAdId ? updated : a));
+          setShowAdForm(false);
+        })
+        .finally(() => setAdSaving(false));
+    } else {
+      apiClient.post(`/business-managers/${bmId}/ad-accounts`, payload)
+        .then(res => {
+          const created = mapAdAccount(res.data.data ?? res.data);
+          setAdAccounts(prev => [created, ...prev]);
+          setShowAdForm(false);
+        })
+        .finally(() => setAdSaving(false));
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-titans-bg/70 backdrop-blur-2xl border-b border-white/[0.06]">
@@ -775,7 +820,16 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
               >
                 {activeTab === 'ad-accounts' && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <motion.button
+                      onClick={() => openAdForm()}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-titans-accent/20 text-titans-accent text-sm font-medium hover:bg-titans-accent/15 hover:border-titans-accent/30 transition-default"
+                    >
+                      <Plus className="w-4 h-4" strokeWidth={1.5} />
+                      Add Ad Account
+                    </motion.button>
                     {filteredAdAccounts.map((account, i) => (
                       <React.Fragment key={account.id}>
                         <motion.div
@@ -1450,6 +1504,137 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                     <span className="flex items-center justify-center gap-2">
                       <Save className="w-4 h-4" strokeWidth={1.5} />
                       {editingPageId ? 'Update Page' : 'Add Page'}
+                    </span>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAdForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAdForm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden"
+            >
+              <div className="p-6 pb-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-titans-accent/15 to-titans-accent/5 border border-titans-accent/20 flex items-center justify-center">
+                      <BarChart3 className="w-5 h-5 text-titans-accent" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-white/90">
+                        {editingAdId ? 'Edit Ad Account' : 'Add Ad Account'}
+                      </h2>
+                      <p className="text-sm text-white/30 font-[425]">
+                        {editingAdId ? 'Update the ad account details.' : 'Enter the ad account information.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAdForm(false)}
+                    className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
+                  >
+                    <X className="w-4 h-4 text-white/50" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      Name <span className="text-titans-accent">*</span>
+                    </label>
+                    <div className="relative">
+                      <BarChart3 className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        value={adForm.name}
+                        onChange={e => setAdForm({ ...adForm, name: e.target.value })}
+                        placeholder="Campaign Account Name"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      Account ID
+                    </label>
+                    <div className="relative">
+                      <Hash className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        value={adForm.account_id}
+                        onChange={e => setAdForm({ ...adForm, account_id: e.target.value })}
+                        placeholder="ACT-XXX-XXXX"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      Facebook Ad Account ID
+                    </label>
+                    <div className="relative">
+                      <Globe className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        value={adForm.fb_ad_account_id}
+                        onChange={e => setAdForm({ ...adForm, fb_ad_account_id: e.target.value })}
+                        placeholder="123456789012345"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Status</label>
+                    <select
+                      value={adForm.status}
+                      onChange={e => setAdForm({ ...adForm, status: e.target.value as any })}
+                      className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                    >
+                      <option value="active" className="bg-titans-card">Active</option>
+                      <option value="disabled" className="bg-titans-card">Disabled</option>
+                      <option value="paused" className="bg-titans-card">Paused</option>
+                    </select>
+                  </div>
+                </div>
+
+                <motion.button
+                  onClick={saveAdAccount}
+                  disabled={adSaving || !adForm.name}
+                  whileTap={{ scale: 0.97 }}
+                  className="relative w-full py-3 rounded-xl bg-gradient-to-r from-titans-accent to-rose-600 text-white text-sm font-medium shadow-lg shadow-titans-accent/20 hover:shadow-titans-accent/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
+                >
+                  {adSaving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+                      {editingAdId ? 'Updating...' : 'Adding...'}
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Save className="w-4 h-4" strokeWidth={1.5} />
+                      {editingAdId ? 'Update Account' : 'Add Account'}
                     </span>
                   )}
                 </motion.button>

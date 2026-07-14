@@ -22,6 +22,25 @@ class AdAccountController
         return AdAccountResource::collection($accounts);
     }
 
+    public function store(Request $request, BusinessManager $businessManager): AdAccountResource
+    {
+        abort_if($businessManager->user_id !== $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'account_id' => 'nullable|string|max:64',
+            'fb_ad_account_id' => 'nullable|string|max:255',
+            'status' => 'sometimes|in:active,disabled,paused',
+            'spend' => 'sometimes|numeric|min:0',
+            'impressions' => 'sometimes|integer|min:0',
+            'clicks' => 'sometimes|integer|min:0',
+        ]);
+
+        $account = $businessManager->adAccounts()->create($validated);
+
+        return new AdAccountResource($account);
+    }
+
     public function update(Request $request, BusinessManager $businessManager, AdAccount $adAccount): JsonResponse
     {
         abort_if($businessManager->user_id !== $request->user()->id, 403);

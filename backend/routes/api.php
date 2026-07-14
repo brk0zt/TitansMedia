@@ -74,6 +74,7 @@ Route::middleware(['auth:sanctum', ApiRateLimiter::class])->group(function () {
 
     // Ad Accounts under a BM
     Route::get('/business-managers/{businessManager}/ad-accounts', [AdAccountController::class, 'index']);
+    Route::post('/business-managers/{businessManager}/ad-accounts', [AdAccountController::class, 'store']);
     Route::put('/business-managers/{businessManager}/ad-accounts/{adAccount}', [AdAccountController::class, 'update']);
 
     // Facebook Pages under a BM (with FB account token/proxy/cookie management)
