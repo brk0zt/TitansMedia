@@ -25,6 +25,16 @@ import {
   CalendarDays,
   AlertCircle,
   CreditCard,
+  Plus,
+  Settings2,
+  Globe,
+  Key,
+  UserCheck,
+  Bell,
+  Timer,
+  ToggleLeft,
+  Save,
+  X,
 } from 'lucide-react';
 import apiClient from '../api/client';
 
@@ -56,6 +66,23 @@ interface TeamMember {
   role: string;
   status: 'active' | 'disabled';
   lastActive: string;
+}
+
+interface FacebookAccount {
+  id: string;
+  name: string;
+  token: string;
+  useragent: string;
+  proxy: string | null;
+  group_name: string | null;
+  cookie: string | null;
+  notify_balance_threshold: number;
+  notify_cooldown_minutes: number;
+  notify_moderation: boolean;
+  notify_cabinet_status: boolean;
+  notify_billing: boolean;
+  status: 'active' | 'disabled';
+  created_at: string;
 }
 
 interface BusinessManager {
@@ -102,6 +129,23 @@ const mapMember = (item: any): TeamMember => ({
   role: item.role,
   status: item.status,
   lastActive: item.last_active,
+});
+
+const mapFbAccount = (item: any): FacebookAccount => ({
+  id: String(item.id),
+  name: item.name,
+  token: item.token,
+  useragent: item.useragent,
+  proxy: item.proxy,
+  group_name: item.group_name,
+  cookie: item.cookie,
+  notify_balance_threshold: item.notify_balance_threshold,
+  notify_cooldown_minutes: item.notify_cooldown_minutes,
+  notify_moderation: item.notify_moderation,
+  notify_cabinet_status: item.notify_cabinet_status,
+  notify_billing: item.notify_billing,
+  status: item.status,
+  created_at: item.created_at,
 });
 
 const formatNumber = (n: number) => {
@@ -256,12 +300,49 @@ const RoleInlineEditor: React.FC<{
   );
 };
 
+const Toggle: React.FC<{
+  value: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}> = ({ value, onChange, label }) => (
+  <div className="flex items-center justify-between py-1.5">
+    <span className="text-sm text-white/70">{label}</span>
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
+        value ? 'bg-titans-accent' : 'bg-white/[0.1]'
+      }`}
+    >
+      <motion.div
+        animate={{ x: value ? 20 : 2 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
+      />
+    </button>
+  </div>
+);
+
 interface BmDetailProps {
   bm: BusinessManager;
   onBack: () => void;
 }
 
-type TabId = 'ad-accounts' | 'pages' | 'team';
+type TabId = 'ad-accounts' | 'pages' | 'team' | 'facebook-accounts';
+
+const defaultFbForm = {
+  name: '',
+  token: '',
+  useragent: navigator.userAgent || 'Mozilla/5.0',
+  proxy: '',
+  group_name: '',
+  cookie: '',
+  notify_balance_threshold: 0,
+  notify_cooldown_minutes: 60,
+  notify_moderation: true,
+  notify_cabinet_status: true,
+  notify_billing: true,
+};
 
 export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [activeTab, setActiveTab] = React.useState<TabId>('ad-accounts');
@@ -271,8 +352,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [adAccounts, setAdAccounts] = React.useState<AdAccount[]>([]);
   const [pages, setPages] = React.useState<Page[]>([]);
   const [members, setMembers] = React.useState<TeamMember[]>([]);
+  const [fbAccounts, setFbAccounts] = React.useState<FacebookAccount[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  const [showFbForm, setShowFbForm] = React.useState(false);
+  const [editingFbId, setEditingFbId] = React.useState<string | null>(null);
+  const [fbForm, setFbForm] = React.useState(defaultFbForm);
+  const [fbSaving, setFbSaving] = React.useState(false);
 
   const [showInvite, setShowInvite] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState('');
@@ -289,12 +376,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       apiClient.get(`/business-managers/${bmId}/ad-accounts`).then(r => r.data?.data ?? []),
       apiClient.get(`/business-managers/${bmId}/pages`).then(r => r.data?.data ?? []),
       apiClient.get(`/business-managers/${bmId}/members`).then(r => r.data?.data ?? []),
+      apiClient.get(`/business-managers/${bmId}/facebook-accounts`).then(r => r.data?.data ?? []),
     ])
-      .then(([accountsData, pagesData, membersData]) => {
+      .then(([accountsData, pagesData, membersData, fbData]) => {
         if (!cancelled) {
           setAdAccounts(accountsData.map(mapAdAccount));
           setPages(pagesData.map(mapPage));
           setMembers(membersData.map(mapMember));
+          setFbAccounts(fbData.map(mapFbAccount));
         }
       })
       .catch(() => {
@@ -311,6 +400,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     { id: 'ad-accounts', label: 'Ad Accounts', icon: BarChart3, count: adAccounts.length },
     { id: 'pages', label: 'Facebook Pages', icon: Newspaper, count: pages.length },
     { id: 'team', label: 'Team Members', icon: Users, count: members.length },
+    { id: 'facebook-accounts', label: 'FB Accounts', icon: UserCheck, count: fbAccounts.length },
   ];
 
   const filteredAdAccounts = React.useMemo(() => {
@@ -355,6 +445,19 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     return list;
   }, [search, filterStatus, members]);
 
+  const filteredFbAccounts = React.useMemo(() => {
+    let list = fbAccounts;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(a =>
+        a.name.toLowerCase().includes(q) ||
+        (a.group_name && a.group_name.toLowerCase().includes(q))
+      );
+    }
+    if (filterStatus !== 'all') list = list.filter(a => a.status === filterStatus);
+    return list;
+  }, [search, filterStatus, fbAccounts]);
+
   const totalSpend = React.useMemo(
     () => adAccounts.reduce((sum, a) => sum + a.spend, 0),
     [adAccounts]
@@ -394,6 +497,67 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         setInviteStatus('idle');
       });
   };
+
+  const openFbForm = (existing?: FacebookAccount) => {
+    if (existing) {
+      setEditingFbId(existing.id);
+      setFbForm({
+        name: existing.name,
+        token: existing.token,
+        useragent: existing.useragent,
+        proxy: existing.proxy || '',
+        group_name: existing.group_name || '',
+        cookie: existing.cookie || '',
+        notify_balance_threshold: existing.notify_balance_threshold,
+        notify_cooldown_minutes: existing.notify_cooldown_minutes,
+        notify_moderation: existing.notify_moderation,
+        notify_cabinet_status: existing.notify_cabinet_status,
+        notify_billing: existing.notify_billing,
+      });
+    } else {
+      setEditingFbId(null);
+      setFbForm({ ...defaultFbForm, useragent: navigator.userAgent || 'Mozilla/5.0' });
+    }
+    setShowFbForm(true);
+  };
+
+  const saveFbAccount = () => {
+    setFbSaving(true);
+    const bmId = Number(bm.id);
+    const payload = { ...fbForm };
+
+    if (editingFbId) {
+      apiClient.put(`/business-managers/${bmId}/facebook-accounts/${editingFbId}`, payload)
+        .then(res => {
+          const updated = mapFbAccount(res.data);
+          setFbAccounts(prev => prev.map(a => a.id === editingFbId ? updated : a));
+          setShowFbForm(false);
+        })
+        .finally(() => setFbSaving(false));
+    } else {
+      apiClient.post(`/business-managers/${bmId}/facebook-accounts`, payload)
+        .then(res => {
+          const created = mapFbAccount(res.data);
+          setFbAccounts(prev => [created, ...prev]);
+          setShowFbForm(false);
+        })
+        .finally(() => setFbSaving(false));
+    }
+  };
+
+  const deleteFbAccount = (id: string) => {
+    setFbAccounts(prev => prev.filter(a => a.id !== id));
+    apiClient.delete(`/business-managers/${Number(bm.id)}/facebook-accounts/${id}`);
+  };
+
+  const fbFormFields = [
+    { key: 'name', label: 'Name', icon: UserCheck, type: 'text', placeholder: 'Account nickname', required: true },
+    { key: 'token', label: 'Token', icon: Key, type: 'text', placeholder: 'EAAB...', required: true },
+    { key: 'useragent', label: 'User Agent', icon: Globe, type: 'text', placeholder: 'Mozilla/5.0...', required: true },
+    { key: 'proxy', label: 'Proxy', icon: Globe, type: 'text', placeholder: 'http://user:pass@host:port', required: false },
+    { key: 'group_name', label: 'Group', icon: Users, type: 'text', placeholder: 'Group name', required: false },
+    { key: 'cookie', label: 'Cookie', icon: UserCheck, type: 'text', placeholder: 'c_user=...;xs=...', required: false },
+  ];
 
   return (
     <>
@@ -534,12 +698,12 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               </div>
             </motion.div>
 
-            <div className="relative flex items-center gap-1 mb-6">
+            <div className="relative flex items-center gap-1 mb-6 overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-[425] transition-default ${
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-[425] whitespace-nowrap transition-default ${
                     activeTab === tab.id ? 'text-white/90' : 'text-white/30 hover:text-white/50'
                   }`}
                 >
@@ -780,6 +944,94 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                     )}
                   </div>
                 )}
+
+                {activeTab === 'facebook-accounts' && (
+                  <div className="space-y-3">
+                    <motion.button
+                      onClick={() => openFbForm()}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 text-blue-400 text-sm font-medium hover:bg-blue-500/15 hover:border-blue-500/30 transition-default"
+                    >
+                      <Plus className="w-4 h-4" strokeWidth={1.5} />
+                      Add Facebook Account
+                    </motion.button>
+
+                    {filteredFbAccounts.map((account, i) => (
+                      <motion.div
+                        key={account.id}
+                        layout
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03, duration: 0.3 }}
+                        className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-white/[0.06] flex items-center justify-center shrink-0">
+                          <UserCheck className="w-5 h-5 text-white/40" strokeWidth={1.5} />
+                        </div>
+                        <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
+                          <div className="sm:col-span-2 min-w-0">
+                            <p className="text-sm font-medium text-white/80 truncate">{account.name}</p>
+                            {account.group_name && (
+                              <p className="text-[11px] text-white/25 font-[425] mt-0.5 truncate">
+                                <Users className="w-3 h-3 inline mr-1" strokeWidth={1.5} />
+                                {account.group_name}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-white/30 font-[425]">Threshold</p>
+                            <p className="text-sm font-semibold text-white/80">{formatCurrency(account.notify_balance_threshold, 'USD')}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-white/30 font-[425]">Cooldown</p>
+                            <p className="text-sm font-semibold text-white/80">{account.notify_cooldown_minutes}m</p>
+                          </div>
+                        </div>
+
+                        <div className="hidden sm:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button
+                            onClick={() => openFbForm(account)}
+                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-blue-500/10 border border-white/[0.06] hover:border-blue-500/20 flex items-center justify-center transition-default group/btn"
+                            title="Edit"
+                          >
+                            <Settings2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-blue-400 transition-default" strokeWidth={1.5} />
+                          </button>
+                          <button
+                            onClick={() => deleteFbAccount(account.id)}
+                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
+                            title="Remove"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                              account.status === 'active'
+                                ? 'bg-emerald-500/10 text-emerald-400'
+                                : 'bg-white/[0.05] text-white/30'
+                            }`}
+                          >
+                            {account.status === 'active' ? (
+                              <PlayCircle className="w-3 h-3" strokeWidth={1.5} />
+                            ) : (
+                              <PauseCircle className="w-3 h-3" strokeWidth={1.5} />
+                            )}
+                            {account.status}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {filteredFbAccounts.length === 0 && (
+                      <div className="text-center py-12">
+                        <UserCheck className="w-12 h-12 mx-auto text-white/[0.08] mb-3" strokeWidth={1} />
+                        <p className="text-sm text-white/20 font-[425]">No Facebook accounts yet. Add one to get started.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
           </>
@@ -892,6 +1144,157 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       </motion.span>
                     )}
                   </AnimatePresence>
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showFbForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFbForm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
+            >
+              <div className="overflow-y-auto max-h-[85vh] p-6 pb-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500/15 to-blue-500/5 border border-blue-500/20 flex items-center justify-center">
+                      <UserCheck className="w-5 h-5 text-blue-400" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-white/90">
+                        {editingFbId ? 'Edit Account' : 'Add Facebook Account'}
+                      </h2>
+                      <p className="text-sm text-white/30 font-[425]">
+                        {editingFbId ? 'Update the account details below.' : 'Enter the account credentials and notification preferences.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowFbForm(false)}
+                    className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
+                  >
+                    <X className="w-4 h-4 text-white/50" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Credentials</p>
+                  {fbFormFields.map(field => (
+                    <div key={field.key}>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                        {field.label} {field.required && <span className="text-titans-accent">*</span>}
+                      </label>
+                      <div className="relative">
+                        <field.icon className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type={field.type}
+                          value={(fbForm as any)[field.key]}
+                          onChange={e => setFbForm({ ...fbForm, [field.key]: e.target.value })}
+                          placeholder={field.placeholder}
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-blue-500/50 focus:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Notifications</p>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      <Bell className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Notify when balance before billing is less than
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={fbForm.notify_balance_threshold}
+                        onChange={e => setFbForm({ ...fbForm, notify_balance_threshold: parseFloat(e.target.value) || 0 })}
+                        placeholder="0.00"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-blue-500/50 focus:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      <Timer className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Send notifications no more than once in (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={fbForm.notify_cooldown_minutes}
+                      onChange={e => setFbForm({ ...fbForm, notify_cooldown_minutes: parseInt(e.target.value) || 60 })}
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-blue-500/50 focus:shadow-[0_4px_20px_-4px_rgba(59,130,246,0.3)] transition-default"
+                    />
+                  </div>
+
+                  <div className="space-y-1 pt-2">
+                    <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase mb-2">
+                      <ToggleLeft className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Notification Types
+                    </p>
+                    <Toggle
+                      value={fbForm.notify_moderation}
+                      onChange={v => setFbForm({ ...fbForm, notify_moderation: v })}
+                      label="Moderation notifications"
+                    />
+                    <Toggle
+                      value={fbForm.notify_cabinet_status}
+                      onChange={v => setFbForm({ ...fbForm, notify_cabinet_status: v })}
+                      label="Cabinet status notices"
+                    />
+                    <Toggle
+                      value={fbForm.notify_billing}
+                      onChange={v => setFbForm({ ...fbForm, notify_billing: v })}
+                      label="Billing notices"
+                    />
+                  </div>
+                </div>
+
+                <motion.button
+                  onClick={saveFbAccount}
+                  disabled={fbSaving || !fbForm.name || !fbForm.token || !fbForm.useragent}
+                  whileTap={{ scale: 0.97 }}
+                  className="relative w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
+                >
+                  {fbSaving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+                      {editingFbId ? 'Updating...' : 'Adding...'}
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <Save className="w-4 h-4" strokeWidth={1.5} />
+                      {editingFbId ? 'Update Account' : 'Add Account'}
+                    </span>
+                  )}
                 </motion.button>
               </div>
             </motion.div>

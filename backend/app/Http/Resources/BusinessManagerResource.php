@@ -16,6 +16,7 @@ class BusinessManagerResource extends JsonResource
             'ad_account_count' => $this->whenCounted('adAccounts', $this->ad_accounts_count ?? 0),
             'page_count' => $this->whenCounted('facebookPages', $this->facebook_pages_count ?? 0),
             'user_count' => $this->whenCounted('teamMembers', $this->team_members_count ?? 0),
+            'facebook_account_count' => $this->whenCounted('facebookAccounts', $this->facebook_accounts_count ?? 0),
             'financial' => [
                 'balance' => (float) $this->balance,
                 'currency' => $this->currency,

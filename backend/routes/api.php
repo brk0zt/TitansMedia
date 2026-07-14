@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BmController;
 use App\Http\Controllers\Api\AdAccountController;
 use App\Http\Controllers\Api\FacebookPageController;
 use App\Http\Controllers\Api\TeamMemberController;
+use App\Http\Controllers\Api\FacebookAccountController;
 use App\Http\Middleware\AuthRateLimiter;
 use App\Http\Middleware\ApiRateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -82,4 +83,10 @@ Route::middleware(['auth:sanctum', ApiRateLimiter::class])->group(function () {
     Route::post('/business-managers/{businessManager}/members/invite', [TeamMemberController::class, 'invite']);
     Route::put('/business-managers/{businessManager}/members/{teamMember}/role', [TeamMemberController::class, 'updateRole']);
     Route::delete('/business-managers/{businessManager}/members/{teamMember}', [TeamMemberController::class, 'destroy']);
+
+    // Facebook Accounts (token, proxy, cookie, notifications)
+    Route::get('/business-managers/{businessManager}/facebook-accounts', [FacebookAccountController::class, 'index']);
+    Route::post('/business-managers/{businessManager}/facebook-accounts', [FacebookAccountController::class, 'store']);
+    Route::put('/business-managers/{businessManager}/facebook-accounts/{facebookAccount}', [FacebookAccountController::class, 'update']);
+    Route::delete('/business-managers/{businessManager}/facebook-accounts/{facebookAccount}', [FacebookAccountController::class, 'destroy']);
 });
