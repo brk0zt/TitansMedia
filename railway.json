@@ -3,8 +3,6 @@
     "watchPatterns": ["backend/**", "Dockerfile", "railway.json"]
   },
   "deploy": {
-    "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT",
-    "healthcheckPath": "/up",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
