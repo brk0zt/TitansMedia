@@ -4,6 +4,7 @@ const PORT = process.env.PORT || 8001;
 const BASE = '/api';
 
 const tokens = new Set();
+const tokenUserMap = new Map();
 let tokenCounter = 0;
 const users = [
   { id: 1, name: 'Michael Chen', email: 'michael@titans.media', password: 'password123', created_at: '2026-01-15T10:00:00Z' }
@@ -22,14 +23,14 @@ const businessManagers = [
 // Store originals for hourly reset
 const initialAdAccounts = {
   1: [
-    { id: 1, account_id: 'act_123456', name: 'Titans Global Display', status: 'active', spend: 18450.00, currency: 'USD', impressions: 2450000, clicks: 48200, fb_ad_account_id: 'act_123456', created_at: '2026-01-25T10:00:00Z' },
-    { id: 2, account_id: 'act_234567', name: 'Titans Social Pro', status: 'active', spend: 12380.00, currency: 'USD', impressions: 1890000, clicks: 35100, fb_ad_account_id: 'act_234567', created_at: '2026-02-01T11:00:00Z' },
-    { id: 3, account_id: 'act_345678', name: 'Titans Retargeting', status: 'active', spend: 8950.00, currency: 'USD', impressions: 980000, clicks: 21400, fb_ad_account_id: 'act_345678', created_at: '2026-02-15T09:00:00Z' },
-    { id: 4, account_id: 'act_456789', name: 'Titans Video Ads', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, fb_ad_account_id: null, created_at: '2026-03-01T08:00:00Z' },
-    { id: 5, account_id: 'act_567890', name: 'Titans Lead Gen', status: 'active', spend: 6500.00, currency: 'USD', impressions: 720000, clicks: 12800, fb_ad_account_id: 'act_567890', created_at: '2026-03-10T14:00:00Z' },
-    { id: 6, account_id: 'act_678901', name: 'Titans DPA Catalog', status: 'active', spend: 4200.00, currency: 'USD', impressions: 510000, clicks: 8900, fb_ad_account_id: 'act_678901', created_at: '2026-04-05T10:00:00Z' },
-    { id: 7, account_id: 'act_789012', name: 'Titans App Installs', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, fb_ad_account_id: null, created_at: '2026-04-20T12:00:00Z' },
-    { id: 8, account_id: 'act_890123', name: 'Titans Brand Awareness', status: 'active', spend: 3100.00, currency: 'USD', impressions: 410000, clicks: 6200, fb_ad_account_id: 'act_890123', created_at: '2026-05-01T09:00:00Z' },
+    { id: 1, account_id: 'act_123456', name: 'Titans Global Display', status: 'active', spend: 18450.00, currency: 'USD', impressions: 2450000, clicks: 48200, balance: 0, automation_mode: 'api', fb_ad_account_id: 'act_123456', token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-01-25T10:00:00Z' },
+    { id: 2, account_id: 'act_234567', name: 'Titans Social Pro', status: 'active', spend: 12380.00, currency: 'USD', impressions: 1890000, clicks: 35100, balance: 0, automation_mode: 'api', fb_ad_account_id: 'act_234567', token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-02-01T11:00:00Z' },
+    { id: 3, account_id: 'act_345678', name: 'Titans Retargeting', status: 'active', spend: 8950.00, currency: 'USD', impressions: 980000, clicks: 21400, balance: 0, automation_mode: 'api', fb_ad_account_id: 'act_345678', token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-02-15T09:00:00Z' },
+    { id: 4, account_id: 'act_456789', name: 'Titans Video Ads', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, balance: 0, automation_mode: 'api', fb_ad_account_id: null, token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-03-01T08:00:00Z' },
+    { id: 5, account_id: 'act_567890', name: 'Titans Lead Gen', status: 'active', spend: 6500.00, currency: 'USD', impressions: 720000, clicks: 12800, balance: 0, automation_mode: 'api', fb_ad_account_id: 'act_567890', token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-03-10T14:00:00Z' },
+    { id: 6, account_id: 'act_678901', name: 'Titans DPA Catalog', status: 'active', spend: 4200.00, currency: 'USD', impressions: 510000, clicks: 8900, balance: 0, automation_mode: 'api', fb_ad_account_id: 'act_678901', token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-04-05T10:00:00Z' },
+    { id: 7, account_id: 'act_789012', name: 'Titans App Installs', status: 'disabled', spend: 0, currency: 'USD', impressions: 0, clicks: 0, balance: 0, automation_mode: 'api', fb_ad_account_id: null, token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-04-20T12:00:00Z' },
+    { id: 8, account_id: 'act_890123', name: 'Titans Brand Awareness', status: 'active', spend: 3100.00, currency: 'USD', impressions: 410000, clicks: 6200, balance: 0, automation_mode: 'api', fb_ad_account_id: 'act_890123', token: '', useragent: '', proxy: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true, monitor_impressions: true, monitor_clicks: true, monitor_budget: true, monitor_reach: true, monitor_engagement: true, created_at: '2026-05-01T09:00:00Z' },
   ],
 };
 
@@ -39,10 +40,10 @@ const adAccounts = JSON.parse(JSON.stringify(initialAdAccounts));
 // --- FACEBOOK PAGES ---
 const initialFacebookPages = {
   1: [
-    { id: 1, page_id: 'page_001', name: 'Titans Media Global', category: 'Media & News', followers: 284000, engaged: 12400, status: 'published', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-01-22T08:00:00Z' },
-    { id: 2, page_id: 'page_002', name: 'Titans Insights', category: 'Consulting', followers: 89000, engaged: 4300, status: 'published', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-02-05T09:00:00Z' },
-    { id: 3, page_id: 'page_003', name: 'Titans Careers', category: 'Recruiting', followers: 45000, engaged: 2100, status: 'published', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-02-18T10:00:00Z' },
-    { id: 4, page_id: 'page_004', name: 'Titans Community', category: 'Community', followers: 32000, engaged: 1800, status: 'unpublished', token: '', useragent: '', proxy: '', group_name: '', cookie: '', notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-03-01T11:00:00Z' },
+    { id: 1, page_id: 'page_001', name: 'Titans Media Global', category: 'Media & News', followers: 284000, engaged: 12400, status: 'published', automation_mode: 'api', token: '', useragent: '', proxy: '', group_name: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', balance: 0, notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-01-22T08:00:00Z' },
+    { id: 2, page_id: 'page_002', name: 'Titans Insights', category: 'Consulting', followers: 89000, engaged: 4300, status: 'published', automation_mode: 'api', token: '', useragent: '', proxy: '', group_name: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', balance: 0, notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-02-05T09:00:00Z' },
+    { id: 3, page_id: 'page_003', name: 'Titans Careers', category: 'Recruiting', followers: 45000, engaged: 2100, status: 'published', automation_mode: 'api', token: '', useragent: '', proxy: '', group_name: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', balance: 0, notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-02-18T10:00:00Z' },
+    { id: 4, page_id: 'page_004', name: 'Titans Community', category: 'Community', followers: 32000, engaged: 1800, status: 'unpublished', automation_mode: 'api', token: '', useragent: '', proxy: '', group_name: '', cookie: '', cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '', balance: 0, notify_balance_threshold: 0, notify_cooldown_minutes: 60, notify_moderation: true, notify_cabinet_status: true, notify_billing: true, created_at: '2026-03-01T11:00:00Z' },
   ],
 };
 
@@ -50,11 +51,11 @@ const facebookPages = JSON.parse(JSON.stringify(initialFacebookPages));
 
 const teamMembers = {
   1: [
-    { id: 1, name: 'Michael Chen', email: 'michael@titans.media', role: 'Admin', status: 'active', last_active: '2026-07-14T09:23:00Z', created_at: '2026-01-15T10:00:00Z' },
-    { id: 2, name: 'Sarah Williams', email: 'sarah@titans.media', role: 'Ad Manager', status: 'active', last_active: '2026-07-14T08:15:00Z', created_at: '2026-01-20T10:00:00Z' },
-    { id: 3, name: 'James Rodriguez', email: 'james@titans.media', role: 'Analyst', status: 'active', last_active: '2026-07-13T16:42:00Z', created_at: '2026-02-10T10:00:00Z' },
-    { id: 4, name: 'Emily Park', email: 'emily@titans.media', role: 'Ad Manager', status: 'disabled', last_active: '2026-07-10T11:30:00Z', created_at: '2026-03-05T10:00:00Z' },
-    { id: 5, name: 'David Kim', email: 'david@titans.media', role: 'Viewer', status: 'active', last_active: '2026-07-13T14:05:00Z', created_at: '2026-04-01T10:00:00Z' },
+    { id: 1, name: 'Michael Chen', email: 'michael@titans.media', role: 'Admin', permissions: { manage_ad_accounts: true, manage_pages: true, invite_users: true, manage_roles: true, remove_members: true }, status: 'active', last_active: '2026-07-14T09:23:00Z', created_at: '2026-01-15T10:00:00Z' },
+    { id: 2, name: 'Sarah Williams', email: 'sarah@titans.media', role: 'Ad Manager', permissions: { manage_ad_accounts: true, manage_pages: false, invite_users: false, manage_roles: false, remove_members: false }, status: 'active', last_active: '2026-07-14T08:15:00Z', created_at: '2026-01-20T10:00:00Z' },
+    { id: 3, name: 'James Rodriguez', email: 'james@titans.media', role: 'Analyst', permissions: { manage_ad_accounts: false, manage_pages: false, invite_users: false, manage_roles: false, remove_members: false }, status: 'active', last_active: '2026-07-13T16:42:00Z', created_at: '2026-02-10T10:00:00Z' },
+    { id: 4, name: 'Emily Park', email: 'emily@titans.media', role: 'Ad Manager', permissions: { manage_ad_accounts: true, manage_pages: false, invite_users: false, manage_roles: false, remove_members: false }, status: 'disabled', last_active: '2026-07-10T11:30:00Z', created_at: '2026-03-05T10:00:00Z' },
+    { id: 5, name: 'David Kim', email: 'david@titans.media', role: 'Analyst', permissions: { manage_ad_accounts: false, manage_pages: false, invite_users: false, manage_roles: false, remove_members: false }, status: 'active', last_active: '2026-07-13T14:05:00Z', created_at: '2026-04-01T10:00:00Z' },
   ],
 };
 
@@ -145,6 +146,20 @@ function getToken(req) {
   return tokens.has(token) ? token : null;
 }
 
+function getCurrentUserEmail(req) {
+  const token = getToken(req);
+  if (!token) return null;
+  return tokenUserMap.get(token) || null;
+}
+
+function getCurrentUserRoleForBm(req, bmId) {
+  const email = getCurrentUserEmail(req);
+  if (!email) return null;
+  const members = teamMembers[bmId] || [];
+  const member = members.find(m => m.email === email);
+  return member ? member.role : null;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
@@ -167,6 +182,7 @@ const server = http.createServer(async (req, res) => {
     users.push(user);
     const token = `tok_${++tokenCounter}`;
     tokens.add(token);
+    tokenUserMap.set(token, user.email);
     return json(res, 201, { message: 'User registered successfully.', access_token: token, token_type: 'Bearer', user: { id: user.id, name: user.name, email: user.email, created_at: user.created_at } });
   }
 
@@ -177,6 +193,7 @@ const server = http.createServer(async (req, res) => {
     if (!user) return json(res, 422, { message: 'The provided credentials do not match our records.', errors: { email: ['Invalid credentials'] } });
     const token = `tok_${++tokenCounter}`;
     tokens.add(token);
+    tokenUserMap.set(token, user.email);
     return json(res, 200, { message: 'Login successful.', access_token: token, token_type: 'Bearer', user: { id: user.id, name: user.name, email: user.email, created_at: user.created_at } });
   }
 
@@ -193,6 +210,7 @@ const server = http.createServer(async (req, res) => {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     tokens.delete(token);
+    tokenUserMap.delete(token);
     return json(res, 200, { message: 'Logged out successfully.' });
   }
 
@@ -270,6 +288,8 @@ const server = http.createServer(async (req, res) => {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const bmId = parseInt(aaMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin' && callerRole !== 'Ad Manager') return json(res, 403, { message: 'Only Admins and Ad Managers can create ad accounts.' });
     const body = await getBody(req);
     if (!adAccounts[bmId]) adAccounts[bmId] = [];
     const newAccount = {
@@ -282,12 +302,16 @@ const server = http.createServer(async (req, res) => {
       impressions: body.impressions ?? 0,
       clicks: body.clicks ?? 0,
       balance: body.balance ?? 0,
-      manual_mode: body.manual_mode ?? false,
+      automation_mode: body.automation_mode || 'api',
       fb_ad_account_id: body.fb_ad_account_id || null,
       token: body.token || '',
       useragent: body.useragent || '',
       proxy: body.proxy || '',
       cookie: body.cookie || '',
+      cookie_raw: body.cookie_raw || '',
+      cookie_c_user: body.cookie_c_user || '',
+      cookie_xs: body.cookie_xs || '',
+      cookie_datr: body.cookie_datr || '',
       notify_balance_threshold: body.notify_balance_threshold ?? 0,
       notify_cooldown_minutes: body.notify_cooldown_minutes ?? 60,
       notify_moderation: body.notify_moderation ?? true,
@@ -313,6 +337,8 @@ const server = http.createServer(async (req, res) => {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const bmId = parseInt(aaUpdateMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin' && callerRole !== 'Ad Manager') return json(res, 403, { message: 'Only Admins and Ad Managers can update ad accounts.' });
     const aaId = parseInt(aaUpdateMatch[2]);
     const body = await getBody(req);
     const accounts = adAccounts[bmId];
@@ -337,6 +363,8 @@ const server = http.createServer(async (req, res) => {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const bmId = parseInt(pgMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can create pages.' });
     const body = await getBody(req);
     if (!facebookPages[bmId]) facebookPages[bmId] = [];
     const newPage = {
@@ -346,12 +374,18 @@ const server = http.createServer(async (req, res) => {
       category: body.category || '',
       followers: body.followers || 0,
       engaged: body.engaged || 0,
-      status: 'published',
+      balance: body.balance ?? 0,
+      status: body.status || 'published',
+      automation_mode: body.automation_mode || 'api',
       token: body.token || '',
       useragent: body.useragent || '',
       proxy: body.proxy || '',
       group_name: body.group_name || '',
       cookie: body.cookie || '',
+      cookie_raw: body.cookie_raw || '',
+      cookie_c_user: body.cookie_c_user || '',
+      cookie_xs: body.cookie_xs || '',
+      cookie_datr: body.cookie_datr || '',
       notify_balance_threshold: body.notify_balance_threshold ?? 0,
       notify_cooldown_minutes: body.notify_cooldown_minutes ?? 60,
       notify_moderation: body.notify_moderation ?? true,
@@ -377,6 +411,8 @@ const server = http.createServer(async (req, res) => {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const bmId = parseInt(pgUpdateMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can update pages.' });
     const pgId = parseInt(pgUpdateMatch[2]);
     const body = await getBody(req);
     const pages = facebookPages[bmId];
@@ -392,6 +428,8 @@ const server = http.createServer(async (req, res) => {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const bmId = parseInt(pgUpdateMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can delete pages.' });
     const pgId = parseInt(pgUpdateMatch[2]);
     const pages = facebookPages[bmId];
     if (pages) {
@@ -415,11 +453,13 @@ const server = http.createServer(async (req, res) => {
   if (method === 'POST' && invMatch) {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
-    const body = await getBody(req);
     const bmId = parseInt(invMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can invite users.' });
+    const body = await getBody(req);
     if (!teamMembers[bmId]) teamMembers[bmId] = [];
     const nameFormatted = body.email.split('@')[0].replace(/[.\-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    const newMember = { id: Date.now(), name: nameFormatted, email: body.email, role: body.role || 'Analyst', status: 'active', last_active: new Date().toISOString(), created_at: new Date().toISOString() };
+    const newMember = { id: Date.now(), name: nameFormatted, email: body.email, role: body.role || 'Analyst', permissions: body.permissions || null, status: 'active', last_active: new Date().toISOString(), created_at: new Date().toISOString() };
     teamMembers[bmId].unshift(newMember);
     return json(res, 201, { message: 'Invitation sent successfully.', member: newMember });
   }
@@ -429,8 +469,10 @@ const server = http.createServer(async (req, res) => {
   if (method === 'PUT' && roleMatch) {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
-    const body = await getBody(req);
     const bmId = parseInt(roleMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can change roles.' });
+    const body = await getBody(req);
     const memberId = parseInt(roleMatch[2]);
     const members = teamMembers[bmId];
     if (!members) return json(res, 404, { message: 'Not found.' });
@@ -440,12 +482,32 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { data: member });
   }
 
+  // BM: Update Member Permissions
+  const permMatch = path.match(/^\/api\/business-managers\/(\d+)\/members\/(\d+)\/permissions$/);
+  if (method === 'PUT' && permMatch) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const bmId = parseInt(permMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can change permissions.' });
+    const body = await getBody(req);
+    const memberId = parseInt(permMatch[2]);
+    const members = teamMembers[bmId];
+    if (!members) return json(res, 404, { message: 'Not found.' });
+    const member = members.find(m => m.id === memberId);
+    if (!member) return json(res, 404, { message: 'Not found.' });
+    member.permissions = body.permissions;
+    return json(res, 200, { data: member });
+  }
+
   // BM: Delete Member
   const delMatch = path.match(/^\/api\/business-managers\/(\d+)\/members\/(\d+)$/);
   if (method === 'DELETE' && delMatch) {
     const token = getToken(req);
     if (!token) return json(res, 401, { message: 'Unauthenticated.' });
     const bmId = parseInt(delMatch[1]);
+    const callerRole = getCurrentUserRoleForBm(req, bmId);
+    if (callerRole !== 'Admin') return json(res, 403, { message: 'Only Admins can remove members.' });
     const memberId = parseInt(delMatch[2]);
     const members = teamMembers[bmId];
     if (members) {
@@ -453,6 +515,27 @@ const server = http.createServer(async (req, res) => {
       if (idx !== -1) members.splice(idx, 1);
     }
     return json(res, 200, { message: 'Team member removed.' });
+  }
+
+  // Automation: Test Cookie
+  if (method === 'POST' && path === `${BASE}/automation/test-cookie`) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    return json(res, 200, { valid: true, message: 'Cookies are valid. Session authenticated.' });
+  }
+
+  // Automation: Fetch Stats
+  if (method === 'POST' && path === `${BASE}/automation/fetch-stats`) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    return json(res, 200, {
+      spend: 12500.00,
+      impressions: 1500000,
+      clicks: 32000,
+      balance: 45000.00,
+      currency: 'USD',
+      source: 'cookie',
+    });
   }
 
   // Billing: GET /api/ad-accounts/{id}/billing

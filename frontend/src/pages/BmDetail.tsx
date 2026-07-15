@@ -35,8 +35,10 @@ import {
   Save,
   X,
   FlaskConical,
+  Cookie,
 } from 'lucide-react';
 import apiClient from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import AnimatedSearchBar from '@/components/ui/AnimatedSearchBar';
 import { AdAccountToast, type AdAccountNotification } from '@/components/ui/AdAccountToast';
 import { FormInfoPanel } from '@/components/ui/FormInfoPanel';
@@ -84,11 +86,15 @@ interface AdAccount {
   impressions: number;
   clicks: number;
   balance: number;
-  manual_mode: boolean;
+  automation_mode: 'api' | 'cookie' | 'manual';
   token: string;
   useragent: string;
   proxy: string | null;
   cookie: string | null;
+  cookie_raw: string;
+  cookie_c_user: string;
+  cookie_xs: string;
+  cookie_datr: string;
   notify_balance_threshold: number;
   notify_cooldown_minutes: number;
   notify_moderation: boolean;
@@ -111,12 +117,17 @@ interface Page {
   category: string;
   followers: number;
   engaged: number;
-  manual_mode: boolean;
+  status: 'published' | 'unpublished';
+  automation_mode: 'api' | 'cookie' | 'manual';
   token: string;
   useragent: string;
   proxy: string | null;
   group_name: string | null;
   cookie: string | null;
+  cookie_raw: string;
+  cookie_c_user: string;
+  cookie_xs: string;
+  cookie_datr: string;
   notify_balance_threshold: number;
   notify_cooldown_minutes: number;
   notify_moderation: boolean;
@@ -130,7 +141,6 @@ interface Page {
   monitor_budget: boolean;
   monitor_reach: boolean;
   monitor_engagement: boolean;
-  status: 'published' | 'unpublished';
 }
 
 interface TeamMember {
@@ -140,7 +150,48 @@ interface TeamMember {
   role: string;
   status: 'active' | 'disabled';
   lastActive: string;
+  permissions: MemberPermissions;
 }
+
+interface MemberPermissions {
+  manage_ad_accounts: boolean;
+  manage_pages: boolean;
+  invite_users: boolean;
+  manage_roles: boolean;
+  remove_members: boolean;
+}
+
+const defaultPermissions: MemberPermissions = {
+  manage_ad_accounts: false,
+  manage_pages: false,
+  invite_users: false,
+  manage_roles: false,
+  remove_members: false,
+};
+
+const rolePermissionPresets: Record<string, MemberPermissions> = {
+  'Admin': {
+    manage_ad_accounts: true,
+    manage_pages: true,
+    invite_users: true,
+    manage_roles: true,
+    remove_members: true,
+  },
+  'Ad Manager': {
+    manage_ad_accounts: true,
+    manage_pages: false,
+    invite_users: false,
+    manage_roles: false,
+    remove_members: false,
+  },
+  'Analyst': {
+    manage_ad_accounts: false,
+    manage_pages: false,
+    invite_users: false,
+    manage_roles: false,
+    remove_members: false,
+  },
+};
 
 interface BusinessManager {
   id: string;
@@ -156,7 +207,22 @@ interface BusinessManager {
   createdAt: string;
 }
 
-const availableRoles = ['Admin', 'Ad Manager', 'Analyst', 'Viewer'];
+const availableRoles = ['Admin', 'Ad Manager', 'Analyst'];
+
+// Returns the effective permissions for a given role. When custom permissions are provided, they override the role defaults.
+const getEffectivePermissions = (role: string, custom?: MemberPermissions): MemberPermissions => {
+  const preset = rolePermissionPresets[role] || defaultPermissions;
+  if (!custom) return preset;
+  const result = { ...preset };
+  for (const key of Object.keys(defaultPermissions) as (keyof MemberPermissions)[]) {
+    if (custom[key] !== undefined) result[key] = custom[key];
+  }
+  return result;
+};
+
+const can = (perms: MemberPermissions, action: keyof MemberPermissions): boolean => {
+  return perms[action] === true;
+};
 
 const mapAdAccount = (item: any): AdAccount => ({
   id: String(item.id ?? ''),
@@ -169,11 +235,15 @@ const mapAdAccount = (item: any): AdAccount => ({
   impressions: item.impressions ?? 0,
   clicks: item.clicks ?? 0,
   balance: item.balance ?? 0,
-  manual_mode: item.manual_mode ?? false,
+  automation_mode: item.automation_mode || 'api',
   token: item.token || '',
   useragent: item.useragent || '',
   proxy: item.proxy || null,
   cookie: item.cookie || null,
+  cookie_raw: item.cookie_raw || '',
+  cookie_c_user: item.cookie_c_user || '',
+  cookie_xs: item.cookie_xs || '',
+  cookie_datr: item.cookie_datr || '',
   notify_balance_threshold: item.notify_balance_threshold ?? 0,
   notify_cooldown_minutes: item.notify_cooldown_minutes ?? 60,
   notify_moderation: item.notify_moderation ?? true,
@@ -196,12 +266,17 @@ const mapPage = (item: any): Page => ({
   category: item.category ?? '',
   followers: item.followers ?? 0,
   engaged: item.engaged ?? 0,
-  manual_mode: item.manual_mode ?? false,
+  status: item.status || 'published',
+  automation_mode: item.automation_mode || 'api',
   token: item.token || '',
   useragent: item.useragent || '',
   proxy: item.proxy || null,
   group_name: item.group_name || null,
   cookie: item.cookie || null,
+  cookie_raw: item.cookie_raw || '',
+  cookie_c_user: item.cookie_c_user || '',
+  cookie_xs: item.cookie_xs || '',
+  cookie_datr: item.cookie_datr || '',
   notify_balance_threshold: item.notify_balance_threshold ?? 0,
   notify_cooldown_minutes: item.notify_cooldown_minutes ?? 60,
   notify_moderation: item.notify_moderation ?? true,
@@ -215,16 +290,22 @@ const mapPage = (item: any): Page => ({
   monitor_budget: item.monitor_budget ?? true,
   monitor_reach: item.monitor_reach ?? true,
   monitor_engagement: item.monitor_engagement ?? true,
-  status: item.status ?? 'published',
 });
 
 const mapMember = (item: any): TeamMember => ({
   id: String(item.id ?? ''),
   name: item.name ?? '',
   email: item.email ?? '',
-  role: item.role ?? 'Viewer',
+  role: item.role ?? 'Analyst',
   status: item.status ?? 'active',
   lastActive: item.last_active ?? null,
+  permissions: item.permissions ? {
+    manage_ad_accounts: !!item.permissions.manage_ad_accounts,
+    manage_pages: !!item.permissions.manage_pages,
+    invite_users: !!item.permissions.invite_users,
+    manage_roles: !!item.permissions.manage_roles,
+    remove_members: !!item.permissions.remove_members,
+  } : rolePermissionPresets[item.role] || defaultPermissions,
 });
 
 const formatNumber = (n: number) => {
@@ -402,6 +483,45 @@ const Toggle: React.FC<{
   </div>
 );
 
+const permissionLabels: Record<keyof MemberPermissions, string> = {
+  manage_ad_accounts: 'Manage Ad Accounts',
+  manage_pages: 'Manage Pages',
+  invite_users: 'Invite Users',
+  manage_roles: 'Manage Roles',
+  remove_members: 'Remove Members',
+};
+
+const PersmissionsEditor: React.FC<{
+  permissions: MemberPermissions;
+  onChange: (perms: MemberPermissions) => void;
+}> = ({ permissions, onChange }) => {
+  const toggle = (key: keyof MemberPermissions) => {
+    onChange({ ...permissions, [key]: !permissions[key] });
+  };
+  return (
+    <div className="space-y-1">
+      {(Object.keys(permissionLabels) as (keyof MemberPermissions)[]).map(key => (
+        <div key={key} className="flex items-center justify-between py-1.5">
+          <span className="text-xs text-white/60">{permissionLabels[key]}</span>
+          <button
+            type="button"
+            onClick={() => toggle(key)}
+            className={`relative w-9 h-4.5 rounded-full transition-colors duration-200 ${
+              permissions[key] ? 'bg-titans-accent' : 'bg-white/[0.1]'
+            }`}
+          >
+            <motion.div
+              animate={{ x: permissions[key] ? 18 : 2 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              className="absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm"
+            />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 interface BmDetailProps {
   bm: BusinessManager;
   onBack: () => void;
@@ -409,18 +529,53 @@ interface BmDetailProps {
 
 type TabId = 'ad-accounts' | 'pages' | 'team';
 
-const defaultPageForm = {
+type PageFormData = {
+  name: string;
+  page_id: string;
+  category: string;
+  followers: number;
+  engaged: number;
+  automation_mode: 'api' | 'cookie' | 'manual';
+  token: string;
+  useragent: string;
+  proxy: string;
+  group_name: string;
+  cookie: string;
+  cookie_raw: string;
+  cookie_c_user: string;
+  cookie_xs: string;
+  cookie_datr: string;
+  notify_balance_threshold: number;
+  notify_cooldown_minutes: number;
+  notify_moderation: boolean;
+  notify_cabinet_status: boolean;
+  notify_billing: boolean;
+  fetch_boosted_posts: boolean;
+  fetch_dark_posts: boolean;
+  fetch_lead_forms: boolean;
+  monitor_impressions: boolean;
+  monitor_clicks: boolean;
+  monitor_budget: boolean;
+  monitor_reach: boolean;
+  monitor_engagement: boolean;
+};
+
+const defaultPageForm: PageFormData = {
   name: '',
   page_id: '',
   category: '',
   followers: 0,
   engaged: 0,
-  manual_mode: false,
+  automation_mode: 'api',
   token: '',
   useragent: navigator.userAgent || 'Mozilla/5.0',
   proxy: '',
   group_name: '',
   cookie: '',
+  cookie_raw: '',
+  cookie_c_user: '',
+  cookie_xs: '',
+  cookie_datr: '',
   notify_balance_threshold: 0,
   notify_cooldown_minutes: 60,
   notify_moderation: true,
@@ -437,6 +592,7 @@ const defaultPageForm = {
 };
 
 export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = React.useState<TabId>('ad-accounts');
   const [search, setSearch] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState<'all' | 'active' | 'disabled'>('all');
@@ -446,25 +602,32 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [members, setMembers] = React.useState<TeamMember[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [currentUserPerms, setCurrentUserPerms] = React.useState<MemberPermissions>(rolePermissionPresets['Admin']);
 
   const [showPageForm, setShowPageForm] = React.useState(false);
+  const [showPageAuthSelect, setShowPageAuthSelect] = React.useState(false);
   const [editingPageId, setEditingPageId] = React.useState<string | null>(null);
   const [pageForm, setPageForm] = React.useState(defaultPageForm);
   const [pageSaving, setPageSaving] = React.useState(false);
 
   const [showAdForm, setShowAdForm] = React.useState(false);
+  const [showAdAuthSelect, setShowAdAuthSelect] = React.useState(false);
   const [editingAdId, setEditingAdId] = React.useState<string | null>(null);
   const [adForm, setAdForm] = React.useState({
     name: '',
     account_id: '',
     fb_ad_account_id: '',
     status: 'active',
-    manual_mode: false,
+    automation_mode: 'api' as 'api' | 'cookie' | 'manual',
     balance: 0,
     token: '',
     useragent: navigator.userAgent || 'Mozilla/5.0',
     proxy: '',
     cookie: '',
+    cookie_raw: '',
+    cookie_c_user: '',
+    cookie_xs: '',
+    cookie_datr: '',
     notify_balance_threshold: 0,
     notify_cooldown_minutes: 60,
     notify_moderation: true,
@@ -518,7 +681,11 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
   const [showInvite, setShowInvite] = React.useState(false);
   const [inviteEmail, setInviteEmail] = React.useState('');
   const [inviteRole, setInviteRole] = React.useState('Analyst');
+  const [invitePermissions, setInvitePermissions] = React.useState<MemberPermissions>(rolePermissionPresets['Analyst']);
   const [inviteStatus, setInviteStatus] = React.useState<'idle' | 'loading' | 'success'>('idle');
+  const [selectedMember, setSelectedMember] = React.useState<TeamMember | null>(null);
+  const [memberDetailRole, setMemberDetailRole] = React.useState('');
+  const [memberDetailPerms, setMemberDetailPerms] = React.useState<MemberPermissions>(defaultPermissions);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -536,6 +703,12 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           setAdAccounts(accountsData.map(mapAdAccount));
           setPages(pagesData.map(mapPage));
           setMembers(membersData.map(mapMember));
+          const current = membersData.map(mapMember).find(
+            (m: TeamMember) => m.email === user?.email
+          );
+          if (current) {
+            setCurrentUserPerms(getEffectivePermissions(current.role, current.permissions));
+          }
         }
       })
       .catch(() => {
@@ -610,6 +783,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       });
   };
 
+  const handlePermissionsUpdate = (memberId: string, permissions: MemberPermissions) => {
+    const bmId = Number(bm.id);
+    apiClient.put(`/business-managers/${bmId}/members/${memberId}/permissions`, { permissions })
+      .then(() => {
+        setMembers(prev => prev.map(m => m.id === memberId ? { ...m, permissions } : m));
+      });
+  };
+
   const handleRemove = (memberId: string) => {
     const bmId = Number(bm.id);
     setMembers(prev => prev.filter(m => m.id !== memberId));
@@ -620,7 +801,11 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     if (!inviteEmail.trim()) return;
     setInviteStatus('loading');
     const bmId = Number(bm.id);
-    apiClient.post(`/business-managers/${bmId}/members/invite`, { email: inviteEmail, role: inviteRole })
+    apiClient.post(`/business-managers/${bmId}/members/invite`, {
+      email: inviteEmail,
+      role: inviteRole,
+      permissions: invitePermissions,
+    })
       .then(res => {
         setInviteStatus('success');
         const newMember = mapMember(res.data?.member ?? {});
@@ -629,6 +814,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           setShowInvite(false);
           setInviteEmail('');
           setInviteRole('Analyst');
+          setInvitePermissions(rolePermissionPresets['Analyst']);
           setInviteStatus('idle');
         }, 800);
       })
@@ -638,7 +824,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       });
   };
 
-  const openPageForm = (existing?: Page) => {
+const openPageForm = (existing?: Page) => {
     if (existing) {
       setEditingPageId(existing.id);
       setPageForm({
@@ -647,12 +833,16 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         category: existing.category,
         followers: existing.followers,
         engaged: existing.engaged,
-        manual_mode: existing.manual_mode,
+        automation_mode: existing.automation_mode,
         token: existing.token,
         useragent: existing.useragent,
         proxy: existing.proxy || '',
         group_name: existing.group_name || '',
         cookie: existing.cookie || '',
+        cookie_raw: existing.cookie_raw || '',
+        cookie_c_user: existing.cookie_c_user || '',
+        cookie_xs: existing.cookie_xs || '',
+        cookie_datr: existing.cookie_datr || '',
         notify_balance_threshold: existing.notify_balance_threshold,
         notify_cooldown_minutes: existing.notify_cooldown_minutes,
         notify_moderation: existing.notify_moderation,
@@ -667,11 +857,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         monitor_reach: existing.monitor_reach,
         monitor_engagement: existing.monitor_engagement,
       });
+      // For existing pages, determine auth method from automation_mode
+      // setPageAuthMethod(existing.automation_mode === 'cookie' ? 'cookie' : 'token');
     } else {
       setEditingPageId(null);
       setPageForm({ ...defaultPageForm, useragent: navigator.userAgent || 'Mozilla/5.0' });
+      // setPageAuthMethod(null);
     }
-    setShowPageForm(true);
+    setShowPageAuthSelect(true);
   };
 
   const savePage = () => {
@@ -714,12 +907,16 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         account_id: existing.accountId,
         fb_ad_account_id: existing.fbAdAccountId || '',
         status: existing.status,
-        manual_mode: existing.manual_mode,
+        automation_mode: existing.automation_mode,
         balance: existing.balance,
         token: existing.token || '',
         useragent: existing.useragent || navigator.userAgent || 'Mozilla/5.0',
         proxy: existing.proxy || '',
         cookie: existing.cookie || '',
+        cookie_raw: existing.cookie_raw || '',
+        cookie_c_user: existing.cookie_c_user || '',
+        cookie_xs: existing.cookie_xs || '',
+        cookie_datr: existing.cookie_datr || '',
         notify_balance_threshold: existing.notify_balance_threshold,
         notify_cooldown_minutes: existing.notify_cooldown_minutes,
         notify_moderation: existing.notify_moderation,
@@ -734,12 +931,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         monitor_reach: existing.monitor_reach,
         monitor_engagement: existing.monitor_engagement,
       });
+      // setAdAuthMethod(existing.automation_mode === 'cookie' ? 'cookie' : 'token');
     } else {
       setEditingAdId(null);
       setAdForm({
         name: '', account_id: '', fb_ad_account_id: '', status: 'active',
-        manual_mode: false, balance: 0,
+        automation_mode: 'api', balance: 0,
         token: '', useragent: navigator.userAgent || 'Mozilla/5.0', proxy: '', cookie: '',
+        cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '',
         notify_balance_threshold: 0, notify_cooldown_minutes: 60,
         notify_moderation: true, notify_cabinet_status: true, notify_billing: true,
         fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true,
@@ -747,7 +946,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         monitor_reach: true, monitor_engagement: true,
       });
     }
-    setShowAdForm(true);
+    setShowAdAuthSelect(true);
   };
 
   const saveAdAccount = () => {
@@ -966,15 +1165,17 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               >
                 {activeTab === 'ad-accounts' && (
                   <div className="space-y-3">
-                    <motion.button
-                      onClick={() => openAdForm()}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-titans-accent/20 text-titans-accent text-sm font-medium hover:bg-titans-accent/15 hover:border-titans-accent/30 transition-default"
-                    >
-                      <Plus className="w-4 h-4" strokeWidth={1.5} />
-                      Add Ad Account
-                    </motion.button>
+                    {can(currentUserPerms, 'manage_ad_accounts') && (
+                      <motion.button
+                        onClick={() => openAdForm()}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-titans-accent/20 text-titans-accent text-sm font-medium hover:bg-titans-accent/15 hover:border-titans-accent/30 transition-default"
+                      >
+                        <Plus className="w-4 h-4" strokeWidth={1.5} />
+                        Add Ad Account
+                      </motion.button>
+                    )}
                     {filteredAdAccounts.map((account, i) => (
                       <React.Fragment key={account.id}>
                         <motion.div
@@ -1156,15 +1357,17 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
 
                 {activeTab === 'pages' && (
                   <div className="space-y-3">
-                    <motion.button
-                      onClick={() => openPageForm()}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 text-sky-400 text-sm font-medium hover:bg-sky-500/15 hover:border-sky-500/30 transition-default"
-                    >
-                      <Plus className="w-4 h-4" strokeWidth={1.5} />
-                      Add Facebook Page
-                    </motion.button>
+                    {can(currentUserPerms, 'manage_pages') && (
+                      <motion.button
+                        onClick={() => openPageForm()}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-sky-500/20 text-sky-400 text-sm font-medium hover:bg-sky-500/15 hover:border-sky-500/30 transition-default"
+                      >
+                        <Plus className="w-4 h-4" strokeWidth={1.5} />
+                        Add Facebook Page
+                      </motion.button>
+                    )}
 
                     {filteredPages.map((page, i) => (
                       <motion.div
@@ -1211,20 +1414,24 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         </div>
 
                         <div className="hidden sm:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <button
-                            onClick={() => openPageForm(page)}
-                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-sky-500/10 border border-white/[0.06] hover:border-sky-500/20 flex items-center justify-center transition-default group/btn"
-                            title="Edit"
-                          >
-                            <Settings2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-sky-400 transition-default" strokeWidth={1.5} />
-                          </button>
-                          <button
-                            onClick={() => deletePage(page.id)}
-                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
-                            title="Remove"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
-                          </button>
+                          {can(currentUserPerms, 'manage_pages') && (
+                            <>
+                              <button
+                                onClick={() => openPageForm(page)}
+                                className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-sky-500/10 border border-white/[0.06] hover:border-sky-500/20 flex items-center justify-center transition-default group/btn"
+                                title="Edit"
+                              >
+                                <Settings2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-sky-400 transition-default" strokeWidth={1.5} />
+                              </button>
+                              <button
+                                onClick={() => deletePage(page.id)}
+                                className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
+                                title="Remove"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
+                              </button>
+                            </>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
@@ -1256,15 +1463,17 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
 
                 {activeTab === 'team' && (
                   <div className="space-y-3">
-                    <motion.button
-                      onClick={() => setShowInvite(true)}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-titans-accent/20 text-titans-accent text-sm font-medium hover:bg-titans-accent/15 hover:border-titans-accent/30 transition-default"
-                    >
-                      <UserPlus className="w-4 h-4" strokeWidth={1.5} />
-                      Invite New User
-                    </motion.button>
+                    {can(currentUserPerms, 'invite_users') && (
+                      <motion.button
+                        onClick={() => setShowInvite(true)}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-titans-accent/20 text-titans-accent text-sm font-medium hover:bg-titans-accent/15 hover:border-titans-accent/30 transition-default"
+                      >
+                        <UserPlus className="w-4 h-4" strokeWidth={1.5} />
+                        Invite New User
+                      </motion.button>
+                    )}
 
                     {filteredMembers.map((member, i) => (
                       <motion.div
@@ -1273,7 +1482,12 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.03, duration: 0.3 }}
-                        className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default"
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setMemberDetailRole(member.role);
+                          setMemberDetailPerms({ ...member.permissions });
+                        }}
+                        className="group relative flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06] transition-default cursor-pointer"
                       >
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-white/[0.06] flex items-center justify-center shrink-0">
                           <span className="text-sm font-semibold text-white/50">{member.name.charAt(0)}</span>
@@ -1314,18 +1528,22 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         </div>
 
                         <div className="hidden sm:flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <RoleInlineEditor
-                            currentRole={member.role}
-                            options={availableRoles}
-                            onRoleChange={(newRole) => handleRoleChange(member.id, newRole)}
-                          />
-                          <button
-                            onClick={() => handleRemove(member.id)}
-                            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
-                            title="Remove"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
-                          </button>
+                          {can(currentUserPerms, 'manage_roles') && (
+                            <RoleInlineEditor
+                              currentRole={member.role}
+                              options={availableRoles}
+                              onRoleChange={(newRole) => handleRoleChange(member.id, newRole)}
+                            />
+                          )}
+                          {can(currentUserPerms, 'remove_members') && (
+                            <button
+                              onClick={() => handleRemove(member.id)}
+                              className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 border border-white/[0.06] hover:border-rose-500/20 flex items-center justify-center transition-default group/btn"
+                              title="Remove"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-white/30 group-hover/btn:text-rose-400 transition-default" strokeWidth={1.5} />
+                            </button>
+                          )}
                         </div>
 
                         <div className="hidden sm:flex items-center gap-2 shrink-0 group-hover:opacity-0 transition-opacity duration-200">
@@ -1358,6 +1576,322 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
           </>
         )}
       </main>
+
+      <AnimatePresence>
+        {selectedMember && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedMember(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden"
+            >
+              <div className="p-6 pb-8 space-y-6">
+                <div className="text-center">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-purple-500/15 to-purple-500/5 border border-purple-500/20 flex items-center justify-center mb-3">
+                    <span className="text-lg font-bold text-purple-400">{selectedMember.name.charAt(0)}</span>
+                  </div>
+                  <h2 className="text-lg font-semibold text-white/90">{selectedMember.name}</h2>
+                  <p className="text-sm text-white/30 font-[425] mt-1">{selectedMember.email}</p>
+                </div>
+
+                <div className="space-y-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-white/40 font-[425]">Status</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      selectedMember.status === 'active'
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : 'bg-white/[0.05] text-white/30'
+                    }`}>
+                      {selectedMember.status === 'active' ? <PlayCircle className="w-3 h-3" strokeWidth={1.5} /> : <PauseCircle className="w-3 h-3" strokeWidth={1.5} />}
+                      {selectedMember.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-white/40 font-[425]">Current Role</span>
+                    <span className="text-sm font-semibold text-white/80">{selectedMember.role}</span>
+                  </div>
+                  {can(currentUserPerms, 'manage_roles') && (
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Change Role</label>
+                      <RoleSelect
+                        value={memberDetailRole}
+                        options={availableRoles}
+                        onChange={(role) => {
+                          setMemberDetailRole(role);
+                          setMemberDetailPerms(rolePermissionPresets[role] || defaultPermissions);
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Permissions</label>
+                    <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                      <PersmissionsEditor
+                        permissions={memberDetailPerms}
+                        onChange={setMemberDetailPerms}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  {can(currentUserPerms, 'manage_roles') && (
+                    <motion.button
+                      onClick={() => {
+                        const permChanged = JSON.stringify(memberDetailPerms) !== JSON.stringify(selectedMember.permissions);
+                        if (memberDetailRole !== selectedMember.role || permChanged) {
+                          if (memberDetailRole !== selectedMember.role) {
+                            handleRoleChange(selectedMember.id, memberDetailRole);
+                          }
+                          if (permChanged) {
+                            handlePermissionsUpdate(selectedMember.id, memberDetailPerms);
+                          }
+                        }
+                        setSelectedMember(null);
+                      }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex-1 py-3 rounded-xl bg-titans-accent text-white text-sm font-medium shadow-glow-sm hover:shadow-glow hover:bg-titans-accent-hover transition-all duration-250"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Save className="w-4 h-4" strokeWidth={1.5} />
+                        Save Changes
+                      </div>
+                    </motion.button>
+                  )}
+                  {can(currentUserPerms, 'remove_members') && (
+                    <motion.button
+                      onClick={() => {
+                        handleRemove(selectedMember.id);
+                        setSelectedMember(null);
+                      }}
+                      whileTap={{ scale: 0.97 }}
+                      className="py-3 px-5 rounded-xl bg-rose-500/10 text-rose-400 text-sm font-medium border border-rose-500/20 hover:bg-rose-500/20 transition-default"
+                    >
+                      <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                    </motion.button>
+                  )}
+                  <motion.button
+                    onClick={() => setSelectedMember(null)}
+                    whileTap={{ scale: 0.97 }}
+                    className="py-3 px-5 rounded-xl bg-white/[0.05] text-white/50 text-sm font-medium hover:bg-white/[0.08] transition-default"
+                  >
+                    <X className="w-4 h-4" strokeWidth={1.5} />
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Page Auth Method Selection Modal */}
+      <AnimatePresence>
+        {showPageAuthSelect && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPageAuthSelect(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className="relative w-full sm:max-w-md rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden"
+            >
+              <div className="p-6 pb-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-500/20 flex items-center justify-center">
+                      <Newspaper className="w-5 h-5 text-sky-400" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-white/90">Add Facebook Page</h2>
+                      <p className="text-sm text-white/30 font-[425] mt-1">How do you want to connect this page?</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowPageAuthSelect(false)}
+                    className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
+                  >
+                    <X className="w-4 h-4 text-white/50" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // setPageAuthMethod('token');
+                      setShowPageAuthSelect(false);
+                      setShowPageForm(true);
+                    }}
+                    className="relative p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-sky-500/30 hover:bg-sky-500/5 transition-all duration-300 flex flex-col items-center gap-2 group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500/20 to-sky-500/5 border border-sky-500/20 flex items-center justify-center">
+                      <Key className="w-6 h-6 text-sky-400" strokeWidth={1.5} />
+                    </div>
+                    <span className="text-sm font-medium text-white/90">Token / API</span>
+                    <span className="text-[11px] text-white/40">Graph API token</span>
+                    <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-sky-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // setPageAuthMethod('cookie');
+                      setShowPageAuthSelect(false);
+                      setShowPageForm(true);
+                    }}
+                    className="relative p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-rose-500/30 hover:bg-rose-500/5 transition-all duration-300 flex flex-col items-center gap-2 group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500/20 to-rose-500/5 border border-rose-500/20 flex items-center justify-center">
+                      <Cookie className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
+                    </div>
+                    <span className="text-sm font-medium text-white/90">Cookie</span>
+                    <span className="text-[11px] text-white/40">Browser session</span>
+                    <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-rose-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </motion.button>
+                </div>
+
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowPageAuthSelect(false)}
+                  className="w-full py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/50 hover:text-white/80 hover:border-white/[0.15] transition-default flex items-center justify-center gap-2"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.5} />
+                  Cancel
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Ad Account Auth Method Selection Modal */}
+      <AnimatePresence>
+        {showAdAuthSelect && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-6"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAdAuthSelect(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              className="relative w-full sm:max-w-md rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden"
+            >
+              <div className="p-6 pb-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-titans-accent/15 to-titans-accent/5 border border-titans-accent/20 flex items-center justify-center">
+                      <BarChart3 className="w-5 h-5 text-titans-accent" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-white/90">Add Ad Account</h2>
+                      <p className="text-sm text-white/30 font-[425] mt-1">How do you want to connect this account?</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAdAuthSelect(false)}
+                    className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
+                  >
+                    <X className="w-4 h-4 text-white/50" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // setAdAuthMethod('token');
+                      setShowAdAuthSelect(false);
+                      setShowAdForm(true);
+                    }}
+                    className="relative p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-titans-accent/30 hover:bg-titans-accent/5 transition-all duration-300 flex flex-col items-center gap-2 group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-titans-accent/20 to-titans-accent/5 border border-titans-accent/20 flex items-center justify-center">
+                      <Key className="w-6 h-6 text-titans-accent" strokeWidth={1.5} />
+                    </div>
+                    <span className="text-sm font-medium text-white/90">Token / API</span>
+                    <span className="text-[11px] text-white/40">Graph API token</span>
+                    <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-titans-accent/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      // setAdAuthMethod('cookie');
+                      setShowAdAuthSelect(false);
+                      setShowAdForm(true);
+                    }}
+                    className="relative p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:border-rose-500/30 hover:bg-rose-500/5 transition-all duration-300 flex flex-col items-center gap-2 group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500/20 to-rose-500/5 border border-rose-500/20 flex items-center justify-center">
+                      <Cookie className="w-6 h-6 text-rose-400" strokeWidth={1.5} />
+                    </div>
+                    <span className="text-sm font-medium text-white/90">Cookie</span>
+                    <span className="text-[11px] text-white/40">Browser session</span>
+                    <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-rose-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </motion.button>
+                </div>
+
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowAdAuthSelect(false)}
+                  className="w-full py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/50 hover:text-white/80 hover:border-white/[0.15] transition-default flex items-center justify-center gap-2"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.5} />
+                  Cancel
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showInvite && (
@@ -1412,7 +1946,22 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                   <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
                     Role
                   </label>
-                  <RoleSelect value={inviteRole} options={availableRoles} onChange={setInviteRole} />
+                  <RoleSelect value={inviteRole} options={availableRoles} onChange={(role) => {
+                    setInviteRole(role);
+                    setInvitePermissions(rolePermissionPresets[role] || defaultPermissions);
+                  }} />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                    Permissions
+                  </label>
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <PersmissionsEditor
+                      permissions={invitePermissions}
+                      onChange={setInvitePermissions}
+                    />
+                  </div>
                 </div>
 
                 <motion.button
@@ -1581,29 +2130,34 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
 
                   <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <div>
-                      <p className="text-xs font-medium text-white/70">Manual Entry Mode</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">Enter data manually instead of using API token</p>
+                      <p className="text-xs font-medium text-white/70">Automation Mode</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">Choose how to connect to this account</p>
                     </div>
-                    <button
-                      onClick={() => setPageForm({ ...pageForm, manual_mode: !pageForm.manual_mode })}
-                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${pageForm.manual_mode ? 'bg-amber-500' : 'bg-white/[0.12]'}`}
-                    >
-                      <motion.div
-                        layout
-                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm ${pageForm.manual_mode ? 'right-0.5' : 'left-0.5'}`}
-                      />
-                    </button>
+                    <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
+                      {(['api', 'cookie', 'manual'] as const).map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => setPageForm({ ...pageForm, automation_mode: mode })}
+                          className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-default ${
+                            pageForm.automation_mode === mode
+                              ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                              : 'text-white/40 hover:text-white/70 border border-transparent'
+                          }`}
+                        >
+                          {mode === 'api' ? 'API/Token' : mode === 'cookie' ? 'Cookie' : 'Manual'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  {!pageForm.manual_mode && (
+                  {pageForm.automation_mode === 'api' && (
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
-                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Facebook Account Credentials</p>
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">API Credentials</p>
                   {[
                     { key: 'token', label: 'Token', icon: Key, placeholder: 'EAAB...', required: true },
                     { key: 'useragent', label: 'User Agent', icon: Globe, placeholder: 'Mozilla/5.0...', required: true },
                     { key: 'proxy', label: 'Proxy', icon: Globe, placeholder: 'http://user:pass@host:port', required: false },
                     { key: 'group_name', label: 'Group', icon: Users, placeholder: 'Group name', required: false },
-                    { key: 'cookie', label: 'Cookie', icon: UserCheck, placeholder: 'c_user=...;xs=...', required: false },
                   ].map(field => (
                     <div key={field.key}>
                       <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
@@ -1621,6 +2175,53 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                       </div>
                     </div>
                   ))}
+                </div>
+                  )}
+
+                  {pageForm.automation_mode === 'cookie' && (
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Cookie Credentials</p>
+                  {[
+                    { key: 'cookie_c_user', label: 'c_user', icon: UserCheck, placeholder: 'Facebook User ID', required: true },
+                    { key: 'cookie_xs', label: 'xs', icon: Key, placeholder: 'Session token', required: true },
+                    { key: 'cookie_datr', label: 'datr', icon: Globe, placeholder: 'datr cookie value', required: false },
+                    { key: 'useragent', label: 'User Agent', icon: Globe, placeholder: 'Mozilla/5.0...', required: true },
+                    { key: 'proxy', label: 'Proxy', icon: Globe, placeholder: 'http://user:pass@host:port', required: false },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                        {field.label} {field.required && <span className="text-titans-accent">*</span>}
+                      </label>
+                      <div className="relative">
+                        <field.icon className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={(pageForm as any)[field.key]}
+                          onChange={e => setPageForm({ ...pageForm, [field.key]: e.target.value })}
+                          placeholder={field.placeholder}
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2">
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Raw Cookie String</label>
+                    <textarea
+                      value={pageForm.cookie_raw}
+                      onChange={e => setPageForm({ ...pageForm, cookie_raw: e.target.value })}
+                      placeholder="c_user=123; xs=abc; datr=xyz; sb=..."
+                      rows={3}
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 px-0 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default resize-none font-mono text-[11px]"
+                    />
+                  </div>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/50 hover:text-white/80 hover:border-white/[0.15] transition-default flex items-center justify-center gap-2"
+                  >
+                    <FlaskConical className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Test Cookies
+                  </motion.button>
                 </div>
                   )}
 
@@ -1744,7 +2345,7 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
 
                 <motion.button
                   onClick={savePage}
-                  disabled={pageSaving || !pageForm.name || (!pageForm.manual_mode && (!pageForm.token || !pageForm.useragent))}
+                  disabled={pageSaving || !pageForm.name || (pageForm.automation_mode === 'api' && (!pageForm.token || !pageForm.useragent)) || (pageForm.automation_mode === 'cookie' && (!pageForm.cookie_c_user || !pageForm.cookie_xs || !pageForm.useragent))}
                   whileTap={{ scale: 0.97 }}
                   className="relative w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-medium shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30 hover:from-sky-600 hover:to-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
                 >
@@ -1891,21 +2492,27 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
 
                   <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <div>
-                      <p className="text-xs font-medium text-white/70">Manual Entry Mode</p>
-                      <p className="text-[10px] text-white/30 mt-0.5">Enter data manually instead of using API token</p>
+                      <p className="text-xs font-medium text-white/70">Automation Mode</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">Choose how to connect to this account</p>
                     </div>
-                    <button
-                      onClick={() => setAdForm({ ...adForm, manual_mode: !adForm.manual_mode })}
-                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${adForm.manual_mode ? 'bg-amber-500' : 'bg-white/[0.12]'}`}
-                    >
-                      <motion.div
-                        layout
-                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm ${adForm.manual_mode ? 'right-0.5' : 'left-0.5'}`}
-                      />
-                    </button>
+                    <div className="flex gap-1 bg-white/[0.04] rounded-lg p-0.5">
+                      {(['api', 'cookie', 'manual'] as const).map(mode => (
+                        <button
+                          key={mode}
+                          onClick={() => setAdForm({ ...adForm, automation_mode: mode })}
+                          className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-default ${
+                            adForm.automation_mode === mode
+                              ? 'bg-titans-accent/15 text-titans-accent border border-titans-accent/30'
+                              : 'text-white/40 hover:text-white/70 border border-transparent'
+                          }`}
+                        >
+                          {mode === 'api' ? 'API/Token' : mode === 'cookie' ? 'Cookie' : 'Manual'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  {adForm.manual_mode && (
+                  {adForm.automation_mode === 'manual' && (
                     <div>
                       <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
                         <DollarSign className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
@@ -1926,14 +2533,13 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                     </div>
                   )}
 
-                  {!adForm.manual_mode && (
+                  {adForm.automation_mode === 'api' && (
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
-                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Account Credentials</p>
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">API Credentials</p>
                   {[
                     { key: 'token', label: 'Token', icon: Key, placeholder: 'EAAB...', required: true },
                     { key: 'useragent', label: 'User Agent', icon: Globe, placeholder: 'Mozilla/5.0...', required: true },
                     { key: 'proxy', label: 'Proxy', icon: Globe, placeholder: 'http://user:pass@host:port', required: false },
-                    { key: 'cookie', label: 'Cookie', icon: UserCheck, placeholder: 'c_user=...;xs=...', required: false },
                   ].map(field => (
                     <div key={field.key}>
                       <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
@@ -1951,6 +2557,53 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                       </div>
                     </div>
                   ))}
+                </div>
+                  )}
+
+                  {adForm.automation_mode === 'cookie' && (
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Cookie Credentials</p>
+                  {[
+                    { key: 'cookie_c_user', label: 'c_user', icon: UserCheck, placeholder: 'Facebook User ID', required: true },
+                    { key: 'cookie_xs', label: 'xs', icon: Key, placeholder: 'Session token', required: true },
+                    { key: 'cookie_datr', label: 'datr', icon: Globe, placeholder: 'datr cookie value', required: false },
+                    { key: 'useragent', label: 'User Agent', icon: Globe, placeholder: 'Mozilla/5.0...', required: true },
+                    { key: 'proxy', label: 'Proxy', icon: Globe, placeholder: 'http://user:pass@host:port', required: false },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                        {field.label} {field.required && <span className="text-titans-accent">*</span>}
+                      </label>
+                      <div className="relative">
+                        <field.icon className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={(adForm as any)[field.key]}
+                          onChange={e => setAdForm({ ...adForm, [field.key]: e.target.value })}
+                          placeholder={field.placeholder}
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2">
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Raw Cookie String</label>
+                    <textarea
+                      value={adForm.cookie_raw}
+                      onChange={e => setAdForm({ ...adForm, cookie_raw: e.target.value })}
+                      placeholder="c_user=123; xs=abc; datr=xyz; sb=..."
+                      rows={3}
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 px-0 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default resize-none font-mono text-[11px]"
+                    />
+                  </div>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs text-white/50 hover:text-white/80 hover:border-white/[0.15] transition-default flex items-center justify-center gap-2"
+                  >
+                    <FlaskConical className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    Test Cookies
+                  </motion.button>
                 </div>
                   )}
 
@@ -2074,7 +2727,7 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
 
                 <motion.button
                   onClick={saveAdAccount}
-                  disabled={adSaving || !adForm.name}
+                  disabled={adSaving || !adForm.name || (adForm.automation_mode === 'api' && (!adForm.token || !adForm.useragent)) || (adForm.automation_mode === 'cookie' && (!adForm.cookie_c_user || !adForm.cookie_xs || !adForm.useragent))}
                   whileTap={{ scale: 0.97 }}
                   className="relative w-full py-3 rounded-xl bg-gradient-to-r from-titans-accent to-rose-600 text-white text-sm font-medium shadow-lg shadow-titans-accent/20 hover:shadow-titans-accent/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
                 >

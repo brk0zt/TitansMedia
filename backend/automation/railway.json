@@ -1,0 +1,26 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 100,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "3100",
+        "BROWSER_POOL_SIZE": "3",
+        "COOKIE_ENCRYPTION_KEY": "${{COOKIE_ENCRYPTION_KEY}}",
+        "PROXY_LIST": "${{PROXY_LIST}}",
+        "HEALTH_CHECK_INTERVAL_MS": "1800000",
+        "HEALTH_CHECK_API_BASE": "${{HEALTH_CHECK_API_BASE}}"
+      }
+    }
+  }
+}

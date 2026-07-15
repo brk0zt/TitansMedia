@@ -1,0 +1,16 @@
+{
+  "name": "apollo-automation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "health": "node cookie-health-check.mjs",
+    "test": "node test-automation.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0",
+    "redis": "^4.7.0"
+  }
+}

@@ -14,11 +14,17 @@ class FacebookPage extends Model
         'category',
         'followers',
         'engaged',
+        'automation_mode',
+        'balance',
         'token',
         'useragent',
         'proxy',
         'group_name',
         'cookie',
+        'cookie_raw',
+        'cookie_c_user',
+        'cookie_xs',
+        'cookie_datr',
         'notify_balance_threshold',
         'notify_cooldown_minutes',
         'notify_moderation',
@@ -39,6 +45,8 @@ class FacebookPage extends Model
     protected $casts = [
         'followers' => 'integer',
         'engaged' => 'integer',
+        'automation_mode' => 'string',
+        'balance' => 'decimal:2',
         'notify_balance_threshold' => 'decimal:2',
         'notify_cooldown_minutes' => 'integer',
         'notify_moderation' => 'boolean',
@@ -53,6 +61,11 @@ class FacebookPage extends Model
         'monitor_reach' => 'boolean',
         'monitor_engagement' => 'boolean',
         'metadata' => 'array',
+        'cookie' => 'encrypted',
+        'cookie_raw' => 'encrypted',
+        'cookie_c_user' => 'encrypted',
+        'cookie_xs' => 'encrypted',
+        'cookie_datr' => 'encrypted',
     ];
 
     public function businessManager(): BelongsTo
