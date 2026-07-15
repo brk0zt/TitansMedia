@@ -32,7 +32,6 @@ return new class extends Migration
             DB::statement("ALTER TABLE projects ADD CONSTRAINT chk_project_status CHECK (status IN ('active','paused','completed','archived'))");
         }
     }
-    }
 
     /**
      * Reverse the migrations.
