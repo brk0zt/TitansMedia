@@ -476,6 +476,17 @@ export const Dashboard: React.FC = () => {
                   <div>
                     <h2 className="text-lg font-semibold text-white/90">Add Business Manager</h2>
                     <p className="text-sm text-white/30 font-[425]">Enter the business manager info and credentials.</p>
+                    <p className="text-sm text-white/40 mt-1">
+                      Don&apos;t know how to do it?{' '}
+                      <a
+                        href="https://developers.facebook.com/tools/explorer"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-titans-accent hover:text-titans-accent/80 underline transition-default"
+                      >
+                        Click to here
+                      </a>
+                    </p>
                   </div>
                 </div>
                 <button

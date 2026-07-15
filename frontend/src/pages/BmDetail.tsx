@@ -1491,6 +1491,17 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       <p className="text-sm text-white/30 font-[425]">
                         {editingPageId ? 'Update the page details and credentials below.' : 'Enter the page info and account credentials.'}
                       </p>
+                      <p className="text-sm text-white/40 mt-1">
+                        Don&apos;t know how to do it?{' '}
+                        <a
+                          href="https://developers.facebook.com/tools/explorer"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-titans-accent hover:text-titans-accent/80 underline transition-default"
+                        >
+                          Click to here
+                        </a>
+                      </p>
                     </div>
                   </div>
                   <button
@@ -1753,6 +1764,17 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       </h2>
                       <p className="text-sm text-white/30 font-[425]">
                         {editingAdId ? 'Update the ad account details.' : 'Enter the ad account info and credentials.'}
+                      </p>
+                      <p className="text-sm text-white/40 mt-1">
+                        Don&apos;t know how to do it?{' '}
+                        <a
+                          href="https://developers.facebook.com/tools/explorer"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-titans-accent hover:text-titans-accent/80 underline transition-default"
+                        >
+                          Click to here
+                        </a>
                       </p>
                     </div>
                   </div>
