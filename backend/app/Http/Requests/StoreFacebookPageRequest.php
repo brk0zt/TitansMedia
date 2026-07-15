@@ -29,6 +29,14 @@ class StoreFacebookPageRequest extends FormRequest
             'notify_moderation' => 'sometimes|boolean',
             'notify_cabinet_status' => 'sometimes|boolean',
             'notify_billing' => 'sometimes|boolean',
+            'fetch_boosted_posts' => 'sometimes|boolean',
+            'fetch_dark_posts' => 'sometimes|boolean',
+            'fetch_lead_forms' => 'sometimes|boolean',
+            'monitor_impressions' => 'sometimes|boolean',
+            'monitor_clicks' => 'sometimes|boolean',
+            'monitor_budget' => 'sometimes|boolean',
+            'monitor_reach' => 'sometimes|boolean',
+            'monitor_engagement' => 'sometimes|boolean',
             'status' => 'sometimes|string|in:published,unpublished',
         ];
     }

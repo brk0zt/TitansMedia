@@ -338,6 +338,14 @@ const server = http.createServer(async (req, res) => {
       notify_moderation: body.notify_moderation ?? true,
       notify_cabinet_status: body.notify_cabinet_status ?? true,
       notify_billing: body.notify_billing ?? true,
+      fetch_boosted_posts: body.fetch_boosted_posts ?? true,
+      fetch_dark_posts: body.fetch_dark_posts ?? true,
+      fetch_lead_forms: body.fetch_lead_forms ?? true,
+      monitor_impressions: body.monitor_impressions ?? true,
+      monitor_clicks: body.monitor_clicks ?? true,
+      monitor_budget: body.monitor_budget ?? true,
+      monitor_reach: body.monitor_reach ?? true,
+      monitor_engagement: body.monitor_engagement ?? true,
       created_at: new Date().toISOString(),
     };
     facebookPages[bmId].unshift(newPage);

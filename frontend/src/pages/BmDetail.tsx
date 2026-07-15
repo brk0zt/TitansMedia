@@ -101,6 +101,14 @@ interface Page {
   notify_moderation: boolean;
   notify_cabinet_status: boolean;
   notify_billing: boolean;
+  fetch_boosted_posts: boolean;
+  fetch_dark_posts: boolean;
+  fetch_lead_forms: boolean;
+  monitor_impressions: boolean;
+  monitor_clicks: boolean;
+  monitor_budget: boolean;
+  monitor_reach: boolean;
+  monitor_engagement: boolean;
   status: 'published' | 'unpublished';
 }
 
@@ -158,6 +166,14 @@ const mapPage = (item: any): Page => ({
   notify_moderation: item.notify_moderation ?? true,
   notify_cabinet_status: item.notify_cabinet_status ?? true,
   notify_billing: item.notify_billing ?? true,
+  fetch_boosted_posts: item.fetch_boosted_posts ?? true,
+  fetch_dark_posts: item.fetch_dark_posts ?? true,
+  fetch_lead_forms: item.fetch_lead_forms ?? true,
+  monitor_impressions: item.monitor_impressions ?? true,
+  monitor_clicks: item.monitor_clicks ?? true,
+  monitor_budget: item.monitor_budget ?? true,
+  monitor_reach: item.monitor_reach ?? true,
+  monitor_engagement: item.monitor_engagement ?? true,
   status: item.status ?? 'published',
 });
 
@@ -368,6 +384,14 @@ const defaultPageForm = {
   notify_moderation: true,
   notify_cabinet_status: true,
   notify_billing: true,
+  fetch_boosted_posts: true,
+  fetch_dark_posts: true,
+  fetch_lead_forms: true,
+  monitor_impressions: true,
+  monitor_clicks: true,
+  monitor_budget: true,
+  monitor_reach: true,
+  monitor_engagement: true,
 };
 
 export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
@@ -567,6 +591,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         notify_moderation: existing.notify_moderation,
         notify_cabinet_status: existing.notify_cabinet_status,
         notify_billing: existing.notify_billing,
+        fetch_boosted_posts: existing.fetch_boosted_posts,
+        fetch_dark_posts: existing.fetch_dark_posts,
+        fetch_lead_forms: existing.fetch_lead_forms,
+        monitor_impressions: existing.monitor_impressions,
+        monitor_clicks: existing.monitor_clicks,
+        monitor_budget: existing.monitor_budget,
+        monitor_reach: existing.monitor_reach,
+        monitor_engagement: existing.monitor_engagement,
       });
     } else {
       setEditingPageId(null);
@@ -1446,6 +1478,65 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Data Sources</p>
+                  <p className="text-xs text-white/30 font-[425] -mt-2">Select which Meta data to fetch using this token.</p>
+
+                  {[
+                    { key: 'fetch_boosted_posts', label: 'Boosted Post Analytics', desc: 'Budget, reach, impressions, clicks, engagement from boosted posts' },
+                    { key: 'fetch_dark_posts', label: 'Dark Post Content (ads_posts)', desc: 'Hidden ad posts, comments, reaction types' },
+                    { key: 'fetch_lead_forms', label: 'Lead Forms', desc: 'Real-time lead data: name, phone, email from form ads' },
+                  ].map(f => (
+                    <div key={f.key} className="flex items-start justify-between py-2.5 border-b border-white/[0.04]">
+                      <div className="flex-1 pr-4">
+                        <span className="text-sm text-white/80 font-medium">{f.label}</span>
+                        <p className="text-[11px] text-white/30 mt-0.5">{f.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => setPageForm({ ...pageForm, [f.key]: !(pageForm as any)[f.key] })}
+                        className={`relative w-10 h-5 rounded-full flex-shrink-0 mt-1 transition-colors duration-200 ${
+                          (pageForm as any)[f.key] ? 'bg-sky-500' : 'bg-white/[0.12]'
+                        }`}
+                      >
+                        <motion.div
+                          layout
+                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm ${
+                            (pageForm as any)[f.key] ? 'right-0.5' : 'left-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase pt-2">Monitor Metrics</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    {[
+                      { key: 'monitor_impressions', label: 'Impressions' },
+                      { key: 'monitor_clicks', label: 'Clicks' },
+                      { key: 'monitor_budget', label: 'Budget / Spend' },
+                      { key: 'monitor_reach', label: 'Reach' },
+                      { key: 'monitor_engagement', label: 'Engagement' },
+                    ].map(f => (
+                      <div key={f.key} className="flex items-center justify-between py-2">
+                        <span className="text-sm text-white/60">{f.label}</span>
+                        <button
+                          onClick={() => setPageForm({ ...pageForm, [f.key]: !(pageForm as any)[f.key] })}
+                          className={`relative w-9 h-4.5 rounded-full transition-colors duration-200 ${
+                            (pageForm as any)[f.key] ? 'bg-sky-500/70' : 'bg-white/[0.1]'
+                          }`}
+                        >
+                          <motion.div
+                            layout
+                            className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm ${
+                              (pageForm as any)[f.key] ? 'right-0.5' : 'left-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
