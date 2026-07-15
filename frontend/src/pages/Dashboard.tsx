@@ -16,6 +16,13 @@ import {
   SlidersHorizontal,
   CalendarDays,
   ArrowRight,
+  Plus,
+  X,
+  Save,
+  Bell,
+  Timer,
+  ToggleLeft,
+  DollarSign,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
@@ -95,6 +102,21 @@ export const Dashboard: React.FC = () => {
 
   const [search, setSearch] = React.useState('');
   const [filterVerified, setFilterVerified] = React.useState<'all' | 'verified' | 'unverified'>('all');
+  const [showBmForm, setShowBmForm] = React.useState(false);
+  const [bmSaving, setBmSaving] = React.useState(false);
+  const [bmForm, setBmForm] = React.useState({
+    name: '',
+    business_id: '',
+    currency: 'USD',
+    verified: true,
+    balance: '',
+    overdue: '',
+    notify_balance_threshold: 0,
+    notify_cooldown_minutes: 60,
+    notify_moderation: true,
+    notify_cabinet_status: true,
+    notify_billing: true,
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -144,6 +166,31 @@ export const Dashboard: React.FC = () => {
     });
     return totals;
   }, [bms]);
+
+  const saveBm = () => {
+    if (!bmForm.name.trim() || !bmForm.business_id.trim()) return;
+    setBmSaving(true);
+    apiClient.post('/business-managers', {
+      ...bmForm,
+      balance: parseFloat(bmForm.balance) || 0,
+      overdue: parseFloat(bmForm.overdue) || 0,
+    })
+      .then(res => {
+        const created = mapBmFromApi(res.data?.data ?? res.data);
+        setBms(prev => [created, ...prev]);
+        setShowBmForm(false);
+        setBmForm({
+          name: '', business_id: '', currency: 'USD', verified: true,
+          balance: '', overdue: '',
+          notify_balance_threshold: 0, notify_cooldown_minutes: 60,
+          notify_moderation: true, notify_cabinet_status: true, notify_billing: true,
+        });
+      })
+      .catch(err => {
+        alert('Failed to create BM: ' + JSON.stringify(err.response?.data || err.message));
+      })
+      .finally(() => setBmSaving(false));
+  };
 
   return (
     <div className="min-h-screen bg-titans-bg text-white flex flex-col font-sans">
@@ -267,6 +314,15 @@ export const Dashboard: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                    <motion.button
+                      onClick={() => setShowBmForm(true)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-xs font-medium shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30 hover:from-sky-600 hover:to-sky-700 transition-all duration-250"
+                    >
+                      <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+                      Add BM
+                    </motion.button>
                   </motion.div>
 
                   <motion.div
@@ -387,6 +443,221 @@ export const Dashboard: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showBmForm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowBmForm(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+            className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
+          >
+            <div className="overflow-y-auto max-h-[85vh] p-6 pb-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-500/20 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-sky-400" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white/90">Add Business Manager</h2>
+                    <p className="text-sm text-white/30 font-[425]">Enter the business manager info and credentials.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowBmForm(false)}
+                  className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
+                >
+                  <X className="w-4 h-4 text-white/50" strokeWidth={1.5} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Business Info</p>
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                    Business Name <span className="text-titans-accent">*</span>
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                    <input
+                      type="text"
+                      value={bmForm.name}
+                      onChange={e => setBmForm({ ...bmForm, name: e.target.value })}
+                      placeholder="My Business"
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      Business ID <span className="text-titans-accent">*</span>
+                    </label>
+                    <div className="relative">
+                      <Hash className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="text"
+                        value={bmForm.business_id}
+                        onChange={e => setBmForm({ ...bmForm, business_id: e.target.value })}
+                        placeholder="123456789012345"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Currency</label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <select
+                        value={bmForm.currency}
+                        onChange={e => setBmForm({ ...bmForm, currency: e.target.value })}
+                        className="w-full bg-transparent text-sm text-white/90 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default appearance-none"
+                      >
+                        {['USD', 'EUR', 'GBP', 'AUD', 'TRY', 'JPY'].map(c => (
+                          <option key={c} value={c} className="bg-titans-card">{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Financial Details</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      <CreditCard className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Balance
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={bmForm.balance}
+                      onChange={e => setBmForm({ ...bmForm, balance: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Overdue
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={bmForm.overdue}
+                      onChange={e => setBmForm({ ...bmForm, overdue: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Notifications</p>
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                    <Bell className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                    Notify when balance before billing is less than
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={bmForm.notify_balance_threshold}
+                      onChange={e => setBmForm({ ...bmForm, notify_balance_threshold: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                    <Timer className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                    Send notifications no more than once in (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={bmForm.notify_cooldown_minutes}
+                    onChange={e => setBmForm({ ...bmForm, notify_cooldown_minutes: parseInt(e.target.value) || 60 })}
+                    className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
+                  />
+                </div>
+                <div className="space-y-1 pt-2">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase mb-2">
+                    <ToggleLeft className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                    Notification Types
+                  </p>
+                  {[
+                    { key: 'notify_moderation', label: 'Moderation notifications' },
+                    { key: 'notify_cabinet_status', label: 'Cabinet status notices' },
+                    { key: 'notify_billing', label: 'Billing notices' },
+                  ].map(f => (
+                    <div key={f.key} className="flex items-center justify-between py-2 border-b border-white/[0.04]">
+                      <span className="text-sm text-white/70">{f.label}</span>
+                      <button
+                        onClick={() => setBmForm({ ...bmForm, [f.key]: !(bmForm as any)[f.key] })}
+                        className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
+                          (bmForm as any)[f.key] ? 'bg-sky-500' : 'bg-white/[0.12]'
+                        }`}
+                      >
+                        <motion.div
+                          layout
+                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm ${
+                            (bmForm as any)[f.key] ? 'right-0.5' : 'left-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <motion.button
+                onClick={saveBm}
+                disabled={bmSaving || !bmForm.name || !bmForm.business_id}
+                whileTap={{ scale: 0.97 }}
+                className="relative w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-medium shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30 hover:from-sky-600 hover:to-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
+              >
+                {bmSaving ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2} />
+                    Adding...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Save className="w-4 h-4" strokeWidth={1.5} />
+                    Add Business Manager
+                  </span>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 };

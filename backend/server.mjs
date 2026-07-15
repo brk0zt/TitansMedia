@@ -210,6 +210,32 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // BM: Create
+  if (method === 'POST' && path === `${BASE}/business-managers`) {
+    const token = getToken(req);
+    if (!token) return json(res, 401, { message: 'Unauthenticated.' });
+    const body = getBody(req);
+    if (!body.name || !body.business_id) return json(res, 422, { message: 'Name and business_id are required.' });
+    const newId = Math.max(...businessManagers.map(b => b.id)) + 1;
+    const now = new Date().toISOString();
+    const bm = {
+      id: newId,
+      name: body.name,
+      business_id: body.business_id,
+      verified: body.verified ?? true,
+      balance: body.balance ?? 0,
+      currency: body.currency ?? 'USD',
+      overdue: body.overdue ?? 0,
+      ad_account_count: 0,
+      page_count: 0,
+      user_count: 1,
+      created_at: now,
+      updated_at: now,
+    };
+    businessManagers.push(bm);
+    return json(res, 201, { data: bm, message: 'Business manager created.' });
+  }
+
   // BM: Show
   const bmShowMatch = path.match(/^\/api\/business-managers\/(\d+)$/);
   if (method === 'GET' && bmShowMatch) {
