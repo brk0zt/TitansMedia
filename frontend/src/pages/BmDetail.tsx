@@ -1477,11 +1477,11 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
+className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
             >
-                <div className="overflow-y-auto max-h-[85vh] p-6 pb-8">
-                 <div className="flex flex-col sm:flex-row gap-6">
-                   <div className="flex-1 space-y-6">
+              <div className="overflow-y-auto max-h-[85vh] p-6 pb-8">
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <div className="flex-1 space-y-6">
                      <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500/15 to-sky-500/5 border border-sky-500/20 flex items-center justify-center">
@@ -1757,7 +1757,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
+              className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
             >
               <div className="overflow-y-auto max-h-[85vh] p-6 pb-8">
                 <div className="flex flex-col sm:flex-row gap-6">

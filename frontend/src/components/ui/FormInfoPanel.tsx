@@ -5,7 +5,7 @@ export function FormInfoPanel() {
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="w-full sm:w-72 flex-shrink-0 bg-black/50 border border-white/[0.06] rounded-xl h-fit sm:sticky sm:top-6 overflow-hidden">
+    <div className="w-full sm:w-96 flex-shrink-0 bg-black/50 border border-white/[0.06] rounded-xl h-fit sm:sticky sm:top-6 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 py-3 border-b border-white/[0.06] hover:bg-white/[0.02] transition-default"
