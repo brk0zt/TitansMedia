@@ -77,11 +77,28 @@ interface AdAccount {
   accountId: string;
   fbAdAccountId: string | null;
   name: string;
-  status: 'active' | 'disabled';
+  status: string;
   spend: number;
   currency: string;
   impressions: number;
   clicks: number;
+  token: string;
+  useragent: string;
+  proxy: string | null;
+  cookie: string | null;
+  notify_balance_threshold: number;
+  notify_cooldown_minutes: number;
+  notify_moderation: boolean;
+  notify_cabinet_status: boolean;
+  notify_billing: boolean;
+  fetch_boosted_posts: boolean;
+  fetch_dark_posts: boolean;
+  fetch_lead_forms: boolean;
+  monitor_impressions: boolean;
+  monitor_clicks: boolean;
+  monitor_budget: boolean;
+  monitor_reach: boolean;
+  monitor_engagement: boolean;
 }
 
 interface Page {
@@ -147,6 +164,23 @@ const mapAdAccount = (item: any): AdAccount => ({
   currency: item.currency ?? 'USD',
   impressions: item.impressions ?? 0,
   clicks: item.clicks ?? 0,
+  token: item.token || '',
+  useragent: item.useragent || '',
+  proxy: item.proxy || null,
+  cookie: item.cookie || null,
+  notify_balance_threshold: item.notify_balance_threshold ?? 0,
+  notify_cooldown_minutes: item.notify_cooldown_minutes ?? 60,
+  notify_moderation: item.notify_moderation ?? true,
+  notify_cabinet_status: item.notify_cabinet_status ?? true,
+  notify_billing: item.notify_billing ?? true,
+  fetch_boosted_posts: item.fetch_boosted_posts ?? true,
+  fetch_dark_posts: item.fetch_dark_posts ?? true,
+  fetch_lead_forms: item.fetch_lead_forms ?? true,
+  monitor_impressions: item.monitor_impressions ?? true,
+  monitor_clicks: item.monitor_clicks ?? true,
+  monitor_budget: item.monitor_budget ?? true,
+  monitor_reach: item.monitor_reach ?? true,
+  monitor_engagement: item.monitor_engagement ?? true,
 });
 
 const mapPage = (item: any): Page => ({
@@ -412,7 +446,29 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
 
   const [showAdForm, setShowAdForm] = React.useState(false);
   const [editingAdId, setEditingAdId] = React.useState<string | null>(null);
-  const [adForm, setAdForm] = React.useState<{ name: string; account_id: string; fb_ad_account_id: string; status: string }>({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' });
+  const [adForm, setAdForm] = React.useState({
+    name: '',
+    account_id: '',
+    fb_ad_account_id: '',
+    status: 'active',
+    token: '',
+    useragent: navigator.userAgent || 'Mozilla/5.0',
+    proxy: '',
+    cookie: '',
+    notify_balance_threshold: 0,
+    notify_cooldown_minutes: 60,
+    notify_moderation: true,
+    notify_cabinet_status: true,
+    notify_billing: true,
+    fetch_boosted_posts: true,
+    fetch_dark_posts: true,
+    fetch_lead_forms: true,
+    monitor_impressions: true,
+    monitor_clicks: true,
+    monitor_budget: true,
+    monitor_reach: true,
+    monitor_engagement: true,
+  });
   const [adSaving, setAdSaving] = React.useState(false);
   const [toasts, setToasts] = React.useState<AdAccountNotification[]>([]);
 
@@ -647,10 +703,35 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         account_id: existing.accountId,
         fb_ad_account_id: existing.fbAdAccountId || '',
         status: existing.status,
+        token: existing.token || '',
+        useragent: existing.useragent || navigator.userAgent || 'Mozilla/5.0',
+        proxy: existing.proxy || '',
+        cookie: existing.cookie || '',
+        notify_balance_threshold: existing.notify_balance_threshold,
+        notify_cooldown_minutes: existing.notify_cooldown_minutes,
+        notify_moderation: existing.notify_moderation,
+        notify_cabinet_status: existing.notify_cabinet_status,
+        notify_billing: existing.notify_billing,
+        fetch_boosted_posts: existing.fetch_boosted_posts,
+        fetch_dark_posts: existing.fetch_dark_posts,
+        fetch_lead_forms: existing.fetch_lead_forms,
+        monitor_impressions: existing.monitor_impressions,
+        monitor_clicks: existing.monitor_clicks,
+        monitor_budget: existing.monitor_budget,
+        monitor_reach: existing.monitor_reach,
+        monitor_engagement: existing.monitor_engagement,
       });
     } else {
       setEditingAdId(null);
-      setAdForm({ name: '', account_id: '', fb_ad_account_id: '', status: 'active' });
+      setAdForm({
+        name: '', account_id: '', fb_ad_account_id: '', status: 'active',
+        token: '', useragent: navigator.userAgent || 'Mozilla/5.0', proxy: '', cookie: '',
+        notify_balance_threshold: 0, notify_cooldown_minutes: 60,
+        notify_moderation: true, notify_cabinet_status: true, notify_billing: true,
+        fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true,
+        monitor_impressions: true, monitor_clicks: true, monitor_budget: true,
+        monitor_reach: true, monitor_engagement: true,
+      });
     }
     setShowAdForm(true);
   };
@@ -1079,21 +1160,35 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-500/5 border border-white/[0.06] flex items-center justify-center shrink-0">
                           <Newspaper className="w-5 h-5 text-white/40" strokeWidth={1.5} />
                         </div>
-                        <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-4 items-center gap-4">
-                          <div className="sm:col-span-2 min-w-0">
-                            <p className="text-sm font-medium text-white/80 truncate">{page.name}</p>
-                            <p className="text-[11px] text-white/25 font-[425] mt-0.5 truncate">
-                              {page.category}
-                              {page.group_name && <span className="ml-2 text-white/15">· {page.group_name}</span>}
-                            </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white/80 truncate">{page.name}</p>
+                          <p className="text-[11px] text-white/25 font-[425] mt-0.5 truncate">
+                            {page.category}
+                            {page.group_name && <span className="ml-2 text-white/15">· {page.group_name}</span>}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${page.fetch_boosted_posts ? 'bg-sky-500/10 text-sky-400' : 'bg-white/[0.04] text-white/20'}`}>
+                              <BarChart3 className="w-2.5 h-2.5" strokeWidth={2} />
+                              Ads
+                            </span>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${page.fetch_dark_posts ? 'bg-violet-500/10 text-violet-400' : 'bg-white/[0.04] text-white/20'}`}>
+                              <SlidersHorizontal className="w-2.5 h-2.5" strokeWidth={2} />
+                              Dark
+                            </span>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${page.fetch_lead_forms ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/[0.04] text-white/20'}`}>
+                              <Users className="w-2.5 h-2.5" strokeWidth={2} />
+                              Leads
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="text-right">
+                            <p className="text-[10px] text-white/30 font-[425]">Threshold</p>
+                            <p className="text-sm font-semibold text-white/80 whitespace-nowrap">{formatCurrency(page.notify_balance_threshold, 'USD')}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-white/30 font-[425]">Threshold</p>
-                            <p className="text-sm font-semibold text-white/80">{formatCurrency(page.notify_balance_threshold, 'USD')}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs text-white/30 font-[425]">Cooldown</p>
-                            <p className="text-sm font-semibold text-white/80">{page.notify_cooldown_minutes}m</p>
+                            <p className="text-[10px] text-white/30 font-[425]">Cooldown</p>
+                            <p className="text-sm font-semibold text-white/80 whitespace-nowrap">{page.notify_cooldown_minutes}m</p>
                           </div>
                         </div>
 
@@ -1644,9 +1739,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.96 }}
               transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-              className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden"
+              className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl bg-titans-card border border-white/[0.08] shadow-soft-lg overflow-hidden max-h-[85vh]"
             >
-              <div className="p-6 pb-8 space-y-6">
+              <div className="overflow-y-auto max-h-[85vh] p-6 pb-8 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-titans-accent/15 to-titans-accent/5 border border-titans-accent/20 flex items-center justify-center">
@@ -1657,7 +1752,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         {editingAdId ? 'Edit Ad Account' : 'Add Ad Account'}
                       </h2>
                       <p className="text-sm text-white/30 font-[425]">
-                        {editingAdId ? 'Update the ad account details.' : 'Enter the ad account information.'}
+                        {editingAdId ? 'Update the ad account details.' : 'Enter the ad account info and credentials.'}
                       </p>
                     </div>
                   </div>
@@ -1670,7 +1765,8 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                 </div>
 
                 <div className="space-y-4">
-                  <div>
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Ad Account Info</p>
+                  <div key="name">
                     <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
                       Name <span className="text-titans-accent">*</span>
                     </label>
@@ -1680,39 +1776,37 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                         type="text"
                         value={adForm.name}
                         onChange={e => setAdForm({ ...adForm, name: e.target.value })}
-                        placeholder="Campaign Account Name"
+                        placeholder="My Ad Account"
                         className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
-                      Account ID
-                    </label>
-                    <div className="relative">
-                      <Hash className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
-                      <input
-                        type="text"
-                        value={adForm.account_id}
-                        onChange={e => setAdForm({ ...adForm, account_id: e.target.value })}
-                        placeholder="ACT-XXX-XXXX"
-                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
-                      />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Account ID</label>
+                      <div className="relative">
+                        <Hash className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={adForm.account_id}
+                          onChange={e => setAdForm({ ...adForm, account_id: e.target.value })}
+                          placeholder="act_123456"
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
-                      Facebook Ad Account ID
-                    </label>
-                    <div className="relative">
-                      <Globe className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
-                      <input
-                        type="text"
-                        value={adForm.fb_ad_account_id}
-                        onChange={e => setAdForm({ ...adForm, fb_ad_account_id: e.target.value })}
-                        placeholder="123456789012345"
-                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
-                      />
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">FB Ad Account ID</label>
+                      <div className="relative">
+                        <Globe className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={adForm.fb_ad_account_id}
+                          onChange={e => setAdForm({ ...adForm, fb_ad_account_id: e.target.value })}
+                          placeholder="123456789012345"
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -1726,6 +1820,150 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                       <option value="disabled" className="bg-titans-card">Disabled</option>
                       <option value="paused" className="bg-titans-card">Paused</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Account Credentials</p>
+                  {[
+                    { key: 'token', label: 'Token', icon: Key, placeholder: 'EAAB...', required: true },
+                    { key: 'useragent', label: 'User Agent', icon: Globe, placeholder: 'Mozilla/5.0...', required: true },
+                    { key: 'proxy', label: 'Proxy', icon: Globe, placeholder: 'http://user:pass@host:port', required: false },
+                    { key: 'cookie', label: 'Cookie', icon: UserCheck, placeholder: 'c_user=...;xs=...', required: false },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                        {field.label} {field.required && <span className="text-titans-accent">*</span>}
+                      </label>
+                      <div className="relative">
+                        <field.icon className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="text"
+                          value={(adForm as any)[field.key]}
+                          onChange={e => setAdForm({ ...adForm, [field.key]: e.target.value })}
+                          placeholder={field.placeholder}
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Data Sources</p>
+                  <p className="text-xs text-white/30 font-[425] -mt-2">Select which Meta data to fetch using this token.</p>
+
+                  {[
+                    { key: 'fetch_boosted_posts', label: 'Boosted Post Analytics', desc: 'Budget, reach, impressions, clicks, engagement from boosted posts' },
+                    { key: 'fetch_dark_posts', label: 'Dark Post Content (ads_posts)', desc: 'Hidden ad posts, comments, reaction types' },
+                    { key: 'fetch_lead_forms', label: 'Lead Forms', desc: 'Real-time lead data: name, phone, email from form ads' },
+                  ].map(f => (
+                    <div key={f.key} className="flex items-start justify-between py-2.5 border-b border-white/[0.04]">
+                      <div className="flex-1 pr-4">
+                        <span className="text-sm text-white/80 font-medium">{f.label}</span>
+                        <p className="text-[11px] text-white/30 mt-0.5">{f.desc}</p>
+                      </div>
+                      <button
+                        onClick={() => setAdForm({ ...adForm, [f.key]: !(adForm as any)[f.key] })}
+                        className={`relative w-10 h-5 rounded-full flex-shrink-0 mt-1 transition-colors duration-200 ${
+                          (adForm as any)[f.key] ? 'bg-sky-500' : 'bg-white/[0.12]'
+                        }`}
+                      >
+                        <motion.div
+                          layout
+                          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm ${
+                            (adForm as any)[f.key] ? 'right-0.5' : 'left-0.5'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase pt-2">Monitor Metrics</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    {[
+                      { key: 'monitor_impressions', label: 'Impressions' },
+                      { key: 'monitor_clicks', label: 'Clicks' },
+                      { key: 'monitor_budget', label: 'Budget / Spend' },
+                      { key: 'monitor_reach', label: 'Reach' },
+                      { key: 'monitor_engagement', label: 'Engagement' },
+                    ].map(f => (
+                      <div key={f.key} className="flex items-center justify-between py-2">
+                        <span className="text-sm text-white/60">{f.label}</span>
+                        <button
+                          onClick={() => setAdForm({ ...adForm, [f.key]: !(adForm as any)[f.key] })}
+                          className={`relative w-9 h-4.5 rounded-full transition-colors duration-200 ${
+                            (adForm as any)[f.key] ? 'bg-sky-500/70' : 'bg-white/[0.1]'
+                          }`}
+                        >
+                          <motion.div
+                            layout
+                            className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm ${
+                              (adForm as any)[f.key] ? 'right-0.5' : 'left-0.5'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Notifications</p>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      <Bell className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Notify when balance before billing is less than
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={adForm.notify_balance_threshold}
+                        onChange={e => setAdForm({ ...adForm, notify_balance_threshold: parseFloat(e.target.value) || 0 })}
+                        placeholder="0.00"
+                        className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                      <Timer className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Send notifications no more than once in (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={adForm.notify_cooldown_minutes}
+                      onChange={e => setAdForm({ ...adForm, notify_cooldown_minutes: parseInt(e.target.value) || 60 })}
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                    />
+                  </div>
+
+                  <div className="space-y-1 pt-2">
+                    <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase mb-2">
+                      <ToggleLeft className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                      Notification Types
+                    </p>
+                    <Toggle
+                      value={adForm.notify_moderation}
+                      onChange={v => setAdForm({ ...adForm, notify_moderation: v })}
+                      label="Moderation notifications"
+                    />
+                    <Toggle
+                      value={adForm.notify_cabinet_status}
+                      onChange={v => setAdForm({ ...adForm, notify_cabinet_status: v })}
+                      label="Cabinet status notices"
+                    />
+                    <Toggle
+                      value={adForm.notify_billing}
+                      onChange={v => setAdForm({ ...adForm, notify_billing: v })}
+                      label="Billing notices"
+                    />
                   </div>
                 </div>
 
