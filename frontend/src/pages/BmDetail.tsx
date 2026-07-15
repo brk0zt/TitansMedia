@@ -34,6 +34,7 @@ import {
   ToggleLeft,
   Save,
   X,
+  FlaskConical,
 } from 'lucide-react';
 import apiClient from '../api/client';
 import AnimatedSearchBar from '@/components/ui/AnimatedSearchBar';
@@ -698,6 +699,23 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
               {bm.verified ? 'Verified' : 'Unverified'}
             </span>
           </div>
+        
+        {/* Demo toast trigger (dev only) */}
+        {import.meta.env.DEV && (
+          <motion.button
+            onClick={() => {
+              addToast({ action: 'created', name: 'Fusion Labs Campaign', accountId: 'act_123456789', status: 'success' });
+              setTimeout(() => addToast({ action: 'updated', name: 'Fusion Labs Retargeting', accountId: 'act_987654321', status: 'success' }), 400);
+              setTimeout(() => addToast({ action: 'created', name: 'Fusion Labs Test Ad', accountId: 'act_555555555', status: 'error', message: 'Insufficient balance' }), 800);
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] flex items-center justify-center transition-default"
+            title="Demo ad account toasts"
+          >
+            <FlaskConical className="w-4 h-4 text-white/50" strokeWidth={1.5} />
+          </motion.button>
+        )}
         </div>
       </header>
 
