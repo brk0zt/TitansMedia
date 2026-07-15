@@ -51,6 +51,8 @@ class AdAccountController
             'monitor_budget' => 'sometimes|boolean',
             'monitor_reach' => 'sometimes|boolean',
             'monitor_engagement' => 'sometimes|boolean',
+            'balance' => 'sometimes|numeric|min:0',
+            'manual_mode' => 'sometimes|boolean',
         ]);
 
         $account = $businessManager->adAccounts()->create($validated);
@@ -88,6 +90,8 @@ class AdAccountController
             'monitor_budget' => 'sometimes|boolean',
             'monitor_reach' => 'sometimes|boolean',
             'monitor_engagement' => 'sometimes|boolean',
+            'balance' => 'sometimes|numeric|min:0',
+            'manual_mode' => 'sometimes|boolean',
         ]);
 
         $adAccount->update($validated);

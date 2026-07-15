@@ -18,6 +18,8 @@ class AdAccountResource extends JsonResource
             'currency' => $this->currency,
             'impressions' => (int) $this->impressions,
             'clicks' => (int) $this->clicks,
+            'balance' => (float) $this->balance,
+            'manual_mode' => (bool) $this->manual_mode,
             'token' => $this->token,
             'useragent' => $this->useragent,
             'proxy' => $this->proxy,

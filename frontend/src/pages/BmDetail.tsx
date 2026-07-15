@@ -83,6 +83,8 @@ interface AdAccount {
   currency: string;
   impressions: number;
   clicks: number;
+  balance: number;
+  manual_mode: boolean;
   token: string;
   useragent: string;
   proxy: string | null;
@@ -109,6 +111,7 @@ interface Page {
   category: string;
   followers: number;
   engaged: number;
+  manual_mode: boolean;
   token: string;
   useragent: string;
   proxy: string | null;
@@ -165,6 +168,8 @@ const mapAdAccount = (item: any): AdAccount => ({
   currency: item.currency ?? 'USD',
   impressions: item.impressions ?? 0,
   clicks: item.clicks ?? 0,
+  balance: item.balance ?? 0,
+  manual_mode: item.manual_mode ?? false,
   token: item.token || '',
   useragent: item.useragent || '',
   proxy: item.proxy || null,
@@ -191,6 +196,7 @@ const mapPage = (item: any): Page => ({
   category: item.category ?? '',
   followers: item.followers ?? 0,
   engaged: item.engaged ?? 0,
+  manual_mode: item.manual_mode ?? false,
   token: item.token || '',
   useragent: item.useragent || '',
   proxy: item.proxy || null,
@@ -409,6 +415,7 @@ const defaultPageForm = {
   category: '',
   followers: 0,
   engaged: 0,
+  manual_mode: false,
   token: '',
   useragent: navigator.userAgent || 'Mozilla/5.0',
   proxy: '',
@@ -452,6 +459,8 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     account_id: '',
     fb_ad_account_id: '',
     status: 'active',
+    manual_mode: false,
+    balance: 0,
     token: '',
     useragent: navigator.userAgent || 'Mozilla/5.0',
     proxy: '',
@@ -638,6 +647,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         category: existing.category,
         followers: existing.followers,
         engaged: existing.engaged,
+        manual_mode: existing.manual_mode,
         token: existing.token,
         useragent: existing.useragent,
         proxy: existing.proxy || '',
@@ -704,6 +714,8 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
         account_id: existing.accountId,
         fb_ad_account_id: existing.fbAdAccountId || '',
         status: existing.status,
+        manual_mode: existing.manual_mode,
+        balance: existing.balance,
         token: existing.token || '',
         useragent: existing.useragent || navigator.userAgent || 'Mozilla/5.0',
         proxy: existing.proxy || '',
@@ -726,6 +738,7 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
       setEditingAdId(null);
       setAdForm({
         name: '', account_id: '', fb_ad_account_id: '', status: 'active',
+        manual_mode: false, balance: 0,
         token: '', useragent: navigator.userAgent || 'Mozilla/5.0', proxy: '', cookie: '',
         notify_balance_threshold: 0, notify_cooldown_minutes: 60,
         notify_moderation: true, notify_cabinet_status: true, notify_billing: true,
@@ -981,10 +994,14 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-titans-accent/10 to-titans-accent/5 border border-white/[0.06] flex items-center justify-center shrink-0">
                             <BarChart3 className="w-5 h-5 text-white/40" strokeWidth={1.5} />
                           </div>
-                          <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-5 items-center gap-4">
+                          <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-6 items-center gap-4">
                             <div className="sm:col-span-2 min-w-0">
                               <p className="text-sm font-medium text-white/80 truncate">{account.name}</p>
                               <p className="text-[11px] text-white/25 font-[425] mt-0.5">{account.accountId}</p>
+                            </div>
+                            <div className="hidden sm:block text-right">
+                              <p className="text-xs text-white/30 font-[425]">Balance</p>
+                              <p className="text-sm font-semibold text-white/80">{formatCurrency(account.balance, account.currency)}</p>
                             </div>
                             <div className="hidden sm:block text-right">
                               <p className="text-xs text-white/30 font-[425]">Spend</p>
@@ -1562,6 +1579,23 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                   </div>
                 </div>
 
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div>
+                      <p className="text-xs font-medium text-white/70">Manual Entry Mode</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">Enter data manually instead of using API token</p>
+                    </div>
+                    <button
+                      onClick={() => setPageForm({ ...pageForm, manual_mode: !pageForm.manual_mode })}
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${pageForm.manual_mode ? 'bg-amber-500' : 'bg-white/[0.12]'}`}
+                    >
+                      <motion.div
+                        layout
+                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm ${pageForm.manual_mode ? 'right-0.5' : 'left-0.5'}`}
+                      />
+                    </button>
+                  </div>
+
+                  {!pageForm.manual_mode && (
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
                   <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Facebook Account Credentials</p>
                   {[
@@ -1588,6 +1622,7 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                     </div>
                   ))}
                 </div>
+                  )}
 
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
                   <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Data Sources</p>
@@ -1709,7 +1744,7 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
 
                 <motion.button
                   onClick={savePage}
-                  disabled={pageSaving || !pageForm.name || !pageForm.token || !pageForm.useragent}
+                  disabled={pageSaving || !pageForm.name || (!pageForm.manual_mode && (!pageForm.token || !pageForm.useragent))}
                   whileTap={{ scale: 0.97 }}
                   className="relative w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white text-sm font-medium shadow-lg shadow-sky-500/20 hover:shadow-sky-500/30 hover:from-sky-600 hover:to-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-250 overflow-hidden"
                 >
@@ -1852,8 +1887,46 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                       <option value="paused" className="bg-titans-card">Paused</option>
                     </select>
                   </div>
-                </div>
+                  </div>
 
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div>
+                      <p className="text-xs font-medium text-white/70">Manual Entry Mode</p>
+                      <p className="text-[10px] text-white/30 mt-0.5">Enter data manually instead of using API token</p>
+                    </div>
+                    <button
+                      onClick={() => setAdForm({ ...adForm, manual_mode: !adForm.manual_mode })}
+                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${adForm.manual_mode ? 'bg-amber-500' : 'bg-white/[0.12]'}`}
+                    >
+                      <motion.div
+                        layout
+                        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm ${adForm.manual_mode ? 'right-0.5' : 'left-0.5'}`}
+                      />
+                    </button>
+                  </div>
+
+                  {adForm.manual_mode && (
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">
+                        <DollarSign className="w-3.5 h-3.5 inline mr-1.5" strokeWidth={1.5} />
+                        Current Balance
+                      </label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/25 pointer-events-none" strokeWidth={1.5} />
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={adForm.balance}
+                          onChange={e => setAdForm({ ...adForm, balance: parseFloat(e.target.value) || 0 })}
+                          placeholder="0.00"
+                          className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 pl-6 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 focus:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.3)] transition-default"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!adForm.manual_mode && (
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
                   <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Account Credentials</p>
                   {[
@@ -1879,6 +1952,7 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                     </div>
                   ))}
                 </div>
+                  )}
 
                 <div className="border-t border-white/[0.06] pt-6 space-y-4">
                   <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Data Sources</p>
