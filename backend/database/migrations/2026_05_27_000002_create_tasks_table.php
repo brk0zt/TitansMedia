@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -29,9 +30,11 @@ return new class extends Migration
             $table->index(['project_id', 'status']);
         });
 
-        // Add check constraints to task priority and status
-        DB::statement("ALTER TABLE tasks ADD CONSTRAINT chk_task_status CHECK (status IN ('pending','in_progress','completed','cancelled'))");
-        DB::statement("ALTER TABLE tasks ADD CONSTRAINT chk_task_priority CHECK (priority BETWEEN 1 AND 5)");
+        // Add check constraints to task priority and status (PostgreSQL only - SQLite handles CHECK inline)
+        if (!app()->environment('testing') && config('database.default') !== 'sqlite') {
+            DB::statement("ALTER TABLE tasks ADD CONSTRAINT chk_task_status CHECK (status IN ('pending','in_progress','completed','cancelled'))");
+            DB::statement("ALTER TABLE tasks ADD CONSTRAINT chk_task_priority CHECK (priority BETWEEN 1 AND 5)");
+        }
     }
 
     /**
