@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -26,8 +27,11 @@ return new class extends Migration
             $table->index(['user_id', 'updated_at']);
         });
 
-        // Add check constraint to status
-        DB::statement("ALTER TABLE projects ADD CONSTRAINT chk_project_status CHECK (status IN ('active','paused','completed','archived'))");
+        // Add check constraint to status (PostgreSQL only - SQLite handles CHECK inline)
+        if (!app()->environment('testing') && config('database.default') !== 'sqlite') {
+            DB::statement("ALTER TABLE projects ADD CONSTRAINT chk_project_status CHECK (status IN ('active','paused','completed','archived'))");
+        }
+    }
     }
 
     /**
