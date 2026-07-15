@@ -8,11 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('ALTER TABLE facebook_pages ALTER COLUMN page_id DROP NOT NULL');
+        if (config('database.default') !== 'sqlite') {
+            DB::statement('ALTER TABLE facebook_pages ALTER COLUMN page_id DROP NOT NULL');
+        }
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE facebook_pages ALTER COLUMN page_id SET NOT NULL');
+        if (config('database.default') !== 'sqlite') {
+            DB::statement('ALTER TABLE facebook_pages ALTER COLUMN page_id SET NOT NULL');
+        }
     }
 };
