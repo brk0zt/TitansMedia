@@ -8,6 +8,7 @@ use App\Models\BusinessManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Str;
 
 class AdAccountController
 {
@@ -94,6 +95,10 @@ class AdAccountController
             'appeal_submitted' => 'sometimes|boolean',
             'review_result' => 'nullable|string|max:64',
         ]);
+
+        if (empty($validated['account_id'])) {
+            $validated['account_id'] = 'act_' . Str::random(10);
+        }
 
         $account = $businessManager->adAccounts()->create($validated);
 
