@@ -45,7 +45,7 @@ Route::middleware([AuthRateLimiter::class])->group(function () {
 // ==========================================
 // PROTECTED API ROUTES (Sanctum + UX-Preserving API Rate Limiting)
 // ==========================================
-Route::middleware([\App\Http\Middleware\AuthenticateApi::class, ApiRateLimiter::class])->group(function () {
+Route::middleware(['auth:sanctum', ApiRateLimiter::class])->group(function () {
     // Session state
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);

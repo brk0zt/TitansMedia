@@ -57,7 +57,7 @@ class AuthController
         $passwordValid = $user ? Hash::check($validated['password'], $user->password) : false;
 
         if (!$user) {
-            Hash::check($validated['password'], '$argon2id$v=19$m=65536,t=3,p=2$ZHVtbXlfc2FsdF9zdHJpbmc$dummyhashvalue');
+            Hash::check($validated['password'], '$2y$12$dummyhashdummyhashdummyhashatimingattackprevent');
         }
 
         if (!$user || !$passwordValid) {
