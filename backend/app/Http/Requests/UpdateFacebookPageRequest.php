@@ -43,7 +43,18 @@ class UpdateFacebookPageRequest extends FormRequest
             'monitor_budget' => 'sometimes|boolean',
             'monitor_reach' => 'sometimes|boolean',
             'monitor_engagement' => 'sometimes|boolean',
-            'status' => 'sometimes|string|in:published,unpublished',
+            'status' => 'sometimes|string|in:published,unpublished,restricted,banned',
+            'linked_instagram' => 'nullable|string|max:255',
+            'banned' => 'sometimes|boolean',
+            'unpublished_reason' => 'nullable|string',
+            'admin_role' => 'sometimes|boolean',
+            'editor' => 'sometimes|boolean',
+            'advertiser' => 'sometimes|boolean',
+            'moderator' => 'sometimes|boolean',
+            'permission_list' => 'nullable|array',
+            'restriction_reason' => 'nullable|string',
+            'policy_strike' => 'sometimes|integer|min:0',
+            'appeal_available' => 'sometimes|boolean',
         ];
     }
 }

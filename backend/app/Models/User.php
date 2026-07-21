@@ -81,4 +81,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\BusinessManager::class);
     }
+
+    /**
+     * Relation with Facebook profiles (FBTool).
+     */
+    public function facebookProfiles()
+    {
+        return $this->hasMany(\App\Models\FacebookProfile::class);
+    }
+
+    /**
+     * Relation with auto rules (FBTool).
+     */
+    public function autoRules()
+    {
+        return $this->hasMany(\App\Models\AutoRule::class);
+    }
 }

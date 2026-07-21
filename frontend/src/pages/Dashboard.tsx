@@ -41,6 +41,13 @@ interface BusinessManager {
   balance: number;
   currency: string;
   overdue: number;
+  restrictionState: string | null;
+  appealsRemaining: number;
+  adminRole: string | null;
+  verificationStatus: string;
+  businessVerification: string;
+  pixelCount: number;
+  partnerCount: number;
   createdAt: string;
 }
 
@@ -91,6 +98,13 @@ const mapBmFromApi = (item: any): BusinessManager => ({
   balance: item.financial?.balance ?? item.balance ?? 0,
   currency: item.financial?.currency ?? item.currency ?? 'USD',
   overdue: item.financial?.overdue ?? item.overdue ?? 0,
+  restrictionState: item.restriction_state ?? null,
+  appealsRemaining: item.appeals_remaining ?? 0,
+  adminRole: item.admin_role ?? null,
+  verificationStatus: item.verification_status ?? (item.verified ? 'verified' : 'none'),
+  businessVerification: item.business_verification ?? 'none',
+  pixelCount: item.pixel_count ?? 0,
+  partnerCount: item.partner_count ?? 0,
   createdAt: item.created_at ?? '',
 });
 
@@ -112,6 +126,10 @@ export const Dashboard: React.FC = () => {
     verified: true,
     balance: '',
     overdue: '',
+    restriction_state: '',
+    appeals_remaining: 0,
+    verification_status: 'none',
+    business_verification: 'none',
     notify_balance_threshold: 0,
     notify_cooldown_minutes: 60,
     notify_moderation: true,
@@ -183,6 +201,8 @@ export const Dashboard: React.FC = () => {
         setBmForm({
           name: '', business_id: '', currency: 'USD', verified: true,
           balance: '', overdue: '',
+          restriction_state: '', appeals_remaining: 0,
+          verification_status: 'none', business_verification: 'none',
           notify_balance_threshold: 0, notify_cooldown_minutes: 60,
           notify_moderation: true, notify_cabinet_status: true, notify_billing: true,
         });
@@ -583,6 +603,58 @@ export const Dashboard: React.FC = () => {
                       placeholder="0.00"
                       className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 focus:shadow-[0_4px_20px_-4px_rgba(0,150,255,0.3)] transition-default"
                     />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Security & Status</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Restriction State</label>
+                    <input
+                      type="text"
+                      value={bmForm.restriction_state || ''}
+                      onChange={e => setBmForm({ ...bmForm, restriction_state: e.target.value })}
+                      placeholder="none"
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Appeals Remaining</label>
+                    <input
+                      type="number" min={0}
+                      value={bmForm.appeals_remaining ?? ''}
+                      onChange={e => setBmForm({ ...bmForm, appeals_remaining: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Verification Status</label>
+                    <select
+                      value={bmForm.verification_status}
+                      onChange={e => setBmForm({ ...bmForm, verification_status: e.target.value })}
+                      className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default appearance-none"
+                    >
+                      {['none', 'pending', 'verified', 'rejected'].map(v => (
+                        <option key={v} value={v} className="bg-titans-card">{v}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Business Verification</label>
+                    <select
+                      value={bmForm.business_verification}
+                      onChange={e => setBmForm({ ...bmForm, business_verification: e.target.value })}
+                      className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default appearance-none"
+                    >
+                      {['none', 'pending', 'verified', 'rejected'].map(v => (
+                        <option key={v} value={v} className="bg-titans-card">{v}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

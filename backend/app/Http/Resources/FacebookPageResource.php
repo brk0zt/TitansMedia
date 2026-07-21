@@ -40,6 +40,17 @@ class FacebookPageResource extends JsonResource
             'monitor_reach' => (bool) $this->monitor_reach,
             'monitor_engagement' => (bool) $this->monitor_engagement,
             'status' => $this->status,
+            'linked_instagram' => $this->linked_instagram,
+            'banned' => (bool) $this->banned,
+            'unpublished_reason' => $this->unpublished_reason,
+            'admin_role' => (bool) $this->admin_role,
+            'editor' => (bool) $this->editor,
+            'advertiser' => (bool) $this->advertiser,
+            'moderator' => (bool) $this->moderator,
+            'permission_list' => $this->permission_list,
+            'restriction_reason' => $this->restriction_reason,
+            'policy_strike' => (int) $this->policy_strike,
+            'appeal_available' => (bool) $this->appeal_available,
             'created_at' => $this->created_at,
         ];
     }

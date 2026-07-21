@@ -16,6 +16,15 @@ class BusinessManager extends Model
         'balance',
         'currency',
         'overdue',
+        'restriction_state',
+        'appeals_remaining',
+        'admin_role',
+        'verification_status',
+        'business_verification',
+        'pixel_count',
+        'partner_count',
+        'page_count_stored',
+        'ad_account_count_stored',
         'metadata',
     ];
 
@@ -23,6 +32,11 @@ class BusinessManager extends Model
         'verified' => 'boolean',
         'balance' => 'decimal:2',
         'overdue' => 'decimal:2',
+        'appeals_remaining' => 'integer',
+        'pixel_count' => 'integer',
+        'partner_count' => 'integer',
+        'page_count_stored' => 'integer',
+        'ad_account_count_stored' => 'integer',
         'metadata' => 'array',
     ];
 

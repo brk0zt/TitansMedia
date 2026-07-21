@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\AdAccountController;
 use App\Http\Controllers\Api\FacebookPageController;
 use App\Http\Controllers\Api\TeamMemberController;
 use App\Http\Controllers\Api\FacebookBillingController;
+use App\Http\Controllers\Api\FacebookProfileController;
+use App\Http\Controllers\Api\AutoRuleController;
 use App\Http\Middleware\AuthRateLimiter;
 use App\Http\Middleware\ApiRateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -91,4 +93,18 @@ Route::middleware(['auth:sanctum', ApiRateLimiter::class])->group(function () {
 
     // Facebook Graph API Billing (proxied via backend for token security)
     Route::get('/ad-accounts/{adAccount}/billing', [FacebookBillingController::class, 'billing']);
+
+    // Facebook Profiles (user-level Facebook account monitoring)
+    Route::apiResource('facebook-profiles', FacebookProfileController::class);
+
+    // Auto Rules (automation rules for ad accounts and pages)
+    Route::get('/auto-rules', [AutoRuleController::class, 'index']);
+    Route::post('/auto-rules', [AutoRuleController::class, 'store']);
+    Route::get('/auto-rules/{autoRule}', [AutoRuleController::class, 'show']);
+    Route::put('/auto-rules/{autoRule}', [AutoRuleController::class, 'update']);
+    Route::delete('/auto-rules/{autoRule}', [AutoRuleController::class, 'destroy']);
+    Route::patch('/auto-rules/{autoRule}/toggle', [AutoRuleController::class, 'toggle']);
+
+    // Auto Rules scoped to a Business Manager (optional convenience)
+    Route::get('/business-managers/{businessManager}/auto-rules', [AutoRuleController::class, 'index']);
 });

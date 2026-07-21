@@ -79,6 +79,10 @@ interface AdAccount {
   id: string;
   accountId: string;
   fbAdAccountId: string | null;
+  fbAccountId: string | null;
+  pixelId: string | null;
+  ownerAccount: string | null;
+  sharedAccounts: any[] | null;
   name: string;
   status: string;
   spend: number;
@@ -86,7 +90,13 @@ interface AdAccount {
   impressions: number;
   clicks: number;
   balance: number;
+  outstandingBalance: number;
+  availableCredit: number;
+  billingThreshold: number | null;
+  dailySpendingLimit: number | null;
+  accountSpendingLimit: number | null;
   automation_mode: 'api' | 'cookie' | 'manual';
+  manual_mode: boolean;
   token: string;
   useragent: string;
   proxy: string | null;
@@ -108,6 +118,32 @@ interface AdAccount {
   monitor_budget: boolean;
   monitor_reach: boolean;
   monitor_engagement: boolean;
+  paymentMethod: string | null;
+  paymentMethodCount: number;
+  cardStatus: string | null;
+  cardExpiration: string | null;
+  autoPay: boolean;
+  manualPay: boolean;
+  billingNotifications: boolean;
+  country: string | null;
+  vatId: string | null;
+  todaySpend: number;
+  yesterdaySpend: number;
+  dailyBudget: number | null;
+  lifetimeBudget: number | null;
+  remainingSpend: number;
+  reviewFeedback: string | null;
+  policyViolations: number;
+  notificationCount: number;
+  accountHealth: string | null;
+  deliveryIssues: string | null;
+  appliedAutoRules: any[] | null;
+  autoComment: boolean;
+  restricted: boolean;
+  unsettled: boolean;
+  pendingReview: boolean;
+  appealSubmitted: boolean;
+  reviewResult: string | null;
 }
 
 interface Page {
@@ -117,7 +153,7 @@ interface Page {
   category: string;
   followers: number;
   engaged: number;
-  status: 'published' | 'unpublished';
+  status: string;
   automation_mode: 'api' | 'cookie' | 'manual';
   token: string;
   useragent: string;
@@ -141,6 +177,17 @@ interface Page {
   monitor_budget: boolean;
   monitor_reach: boolean;
   monitor_engagement: boolean;
+  linkedInstagram: string | null;
+  banned: boolean;
+  unpublishedReason: string | null;
+  adminRole: boolean;
+  editor: boolean;
+  advertiser: boolean;
+  moderator: boolean;
+  permissionList: any[] | null;
+  restrictionReason: string | null;
+  policyStrike: number;
+  appealAvailable: boolean;
 }
 
 interface TeamMember {
@@ -204,6 +251,13 @@ interface BusinessManager {
   balance: number;
   currency: string;
   overdue: number;
+  restrictionState: string | null;
+  appealsRemaining: number;
+  adminRole: string | null;
+  verificationStatus: string;
+  businessVerification: string;
+  pixelCount: number;
+  partnerCount: number;
   createdAt: string;
 }
 
@@ -228,6 +282,10 @@ const mapAdAccount = (item: any): AdAccount => ({
   id: String(item.id ?? ''),
   accountId: item.account_id || String(item.id ?? ''),
   fbAdAccountId: item.fb_ad_account_id || null,
+  fbAccountId: item.fb_account_id || null,
+  pixelId: item.pixel_id || null,
+  ownerAccount: item.owner_account || null,
+  sharedAccounts: item.shared_accounts || null,
   name: item.name ?? '',
   status: item.status ?? 'active',
   spend: item.spend ?? 0,
@@ -235,7 +293,13 @@ const mapAdAccount = (item: any): AdAccount => ({
   impressions: item.impressions ?? 0,
   clicks: item.clicks ?? 0,
   balance: item.balance ?? 0,
+  outstandingBalance: item.outstanding_balance ?? 0,
+  availableCredit: item.available_credit ?? 0,
+  billingThreshold: item.billing_threshold ?? null,
+  dailySpendingLimit: item.daily_spending_limit ?? null,
+  accountSpendingLimit: item.account_spending_limit ?? null,
   automation_mode: item.automation_mode || 'api',
+  manual_mode: item.manual_mode ?? false,
   token: item.token || '',
   useragent: item.useragent || '',
   proxy: item.proxy || null,
@@ -257,6 +321,32 @@ const mapAdAccount = (item: any): AdAccount => ({
   monitor_budget: item.monitor_budget ?? true,
   monitor_reach: item.monitor_reach ?? true,
   monitor_engagement: item.monitor_engagement ?? true,
+  paymentMethod: item.payment_method ?? null,
+  paymentMethodCount: item.payment_method_count ?? 0,
+  cardStatus: item.card_status ?? null,
+  cardExpiration: item.card_expiration ?? null,
+  autoPay: item.auto_pay ?? false,
+  manualPay: item.manual_pay ?? false,
+  billingNotifications: item.billing_notifications ?? true,
+  country: item.country ?? null,
+  vatId: item.vat_id ?? null,
+  todaySpend: item.today_spend ?? 0,
+  yesterdaySpend: item.yesterday_spend ?? 0,
+  dailyBudget: item.daily_budget ?? null,
+  lifetimeBudget: item.lifetime_budget ?? null,
+  remainingSpend: item.remaining_spend ?? 0,
+  reviewFeedback: item.review_feedback ?? null,
+  policyViolations: item.policy_violations ?? 0,
+  notificationCount: item.notification_count ?? 0,
+  accountHealth: item.account_health ?? null,
+  deliveryIssues: item.delivery_issues ?? null,
+  appliedAutoRules: item.applied_auto_rules ?? null,
+  autoComment: item.auto_comment ?? false,
+  restricted: item.restricted ?? false,
+  unsettled: item.unsettled ?? false,
+  pendingReview: item.pending_review ?? false,
+  appealSubmitted: item.appeal_submitted ?? false,
+  reviewResult: item.review_result ?? null,
 });
 
 const mapPage = (item: any): Page => ({
@@ -290,6 +380,17 @@ const mapPage = (item: any): Page => ({
   monitor_budget: item.monitor_budget ?? true,
   monitor_reach: item.monitor_reach ?? true,
   monitor_engagement: item.monitor_engagement ?? true,
+  linkedInstagram: item.linked_instagram ?? null,
+  banned: item.banned ?? false,
+  unpublishedReason: item.unpublished_reason ?? null,
+  adminRole: item.admin_role ?? false,
+  editor: item.editor ?? false,
+  advertiser: item.advertiser ?? false,
+  moderator: item.moderator ?? false,
+  permissionList: item.permission_list ?? null,
+  restrictionReason: item.restriction_reason ?? null,
+  policyStrike: item.policy_strike ?? 0,
+  appealAvailable: item.appeal_available ?? false,
 });
 
 const mapMember = (item: any): TeamMember => ({
