@@ -659,6 +659,16 @@ type PageFormData = {
   monitor_budget: boolean;
   monitor_reach: boolean;
   monitor_engagement: boolean;
+  linked_instagram: string;
+  banned: boolean;
+  unpublished_reason: string;
+  admin_role: boolean;
+  editor: boolean;
+  advertiser: boolean;
+  moderator: boolean;
+  restriction_reason: string;
+  policy_strike: number;
+  appeal_available: boolean;
 };
 
 const defaultPageForm: PageFormData = {
@@ -690,6 +700,16 @@ const defaultPageForm: PageFormData = {
   monitor_budget: true,
   monitor_reach: true,
   monitor_engagement: true,
+  linked_instagram: '',
+  banned: false,
+  unpublished_reason: '',
+  admin_role: false,
+  editor: false,
+  advertiser: false,
+  moderator: false,
+  restriction_reason: '',
+  policy_strike: 0,
+  appeal_available: false,
 };
 
 export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
@@ -718,6 +738,9 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     name: '',
     account_id: '',
     fb_ad_account_id: '',
+    fb_account_id: '',
+    pixel_id: '',
+    owner_account: '',
     status: 'active',
     automation_mode: 'api' as 'api' | 'cookie' | 'manual',
     balance: 0,
@@ -742,6 +765,35 @@ export const BmDetail: React.FC<BmDetailProps> = ({ bm, onBack }) => {
     monitor_budget: true,
     monitor_reach: true,
     monitor_engagement: true,
+    daily_spending_limit: 0,
+    account_spending_limit: 0,
+    outstanding_balance: 0,
+    available_credit: 0,
+    billing_threshold: 0,
+    payment_method: '',
+    card_status: '',
+    card_expiration: '',
+    auto_pay: false,
+    manual_pay: false,
+    billing_notifications: true,
+    country: '',
+    vat_id: '',
+    today_spend: 0,
+    yesterday_spend: 0,
+    daily_budget: 0,
+    lifetime_budget: 0,
+    remaining_spend: 0,
+    review_feedback: '',
+    policy_violations: 0,
+    account_health: '',
+    delivery_issues: '',
+    auto_comment: false,
+    restricted: false,
+    unsettled: false,
+    pending_review: false,
+    appeal_submitted: false,
+    review_result: '',
+    payment_method_count: 0,
   });
   const [adSaving, setAdSaving] = React.useState(false);
   const [toasts, setToasts] = React.useState<AdAccountNotification[]>([]);
@@ -957,6 +1009,16 @@ const openPageForm = (existing?: Page) => {
         monitor_budget: existing.monitor_budget,
         monitor_reach: existing.monitor_reach,
         monitor_engagement: existing.monitor_engagement,
+        linked_instagram: existing.linkedInstagram || '',
+        banned: existing.banned ?? false,
+        unpublished_reason: existing.unpublishedReason || '',
+        admin_role: existing.adminRole ?? false,
+        editor: existing.editor ?? false,
+        advertiser: existing.advertiser ?? false,
+        moderator: existing.moderator ?? false,
+        restriction_reason: existing.restrictionReason || '',
+        policy_strike: existing.policyStrike ?? 0,
+        appeal_available: existing.appealAvailable ?? false,
       });
       // For existing pages, determine auth method from automation_mode
       // setPageAuthMethod(existing.automation_mode === 'cookie' ? 'cookie' : 'token');
@@ -1007,6 +1069,9 @@ const openPageForm = (existing?: Page) => {
         name: existing.name,
         account_id: existing.accountId,
         fb_ad_account_id: existing.fbAdAccountId || '',
+        fb_account_id: existing.fbAccountId || '',
+        pixel_id: existing.pixelId || '',
+        owner_account: existing.ownerAccount || '',
         status: existing.status,
         automation_mode: existing.automation_mode,
         balance: existing.balance,
@@ -1031,12 +1096,42 @@ const openPageForm = (existing?: Page) => {
         monitor_budget: existing.monitor_budget,
         monitor_reach: existing.monitor_reach,
         monitor_engagement: existing.monitor_engagement,
+        daily_spending_limit: existing.dailySpendingLimit ?? 0,
+        account_spending_limit: existing.accountSpendingLimit ?? 0,
+        outstanding_balance: existing.outstandingBalance ?? 0,
+        available_credit: existing.availableCredit ?? 0,
+        billing_threshold: existing.billingThreshold ?? 0,
+        payment_method: existing.paymentMethod || '',
+        card_status: existing.cardStatus || '',
+        card_expiration: existing.cardExpiration || '',
+        auto_pay: existing.autoPay ?? false,
+        manual_pay: existing.manualPay ?? false,
+        billing_notifications: existing.billingNotifications ?? true,
+        country: existing.country || '',
+        vat_id: existing.vatId || '',
+        today_spend: existing.todaySpend ?? 0,
+        yesterday_spend: existing.yesterdaySpend ?? 0,
+        daily_budget: existing.dailyBudget ?? 0,
+        lifetime_budget: existing.lifetimeBudget ?? 0,
+        remaining_spend: existing.remainingSpend ?? 0,
+        review_feedback: existing.reviewFeedback || '',
+        policy_violations: existing.policyViolations ?? 0,
+        account_health: existing.accountHealth || '',
+        delivery_issues: existing.deliveryIssues || '',
+        auto_comment: existing.autoComment ?? false,
+        restricted: existing.restricted ?? false,
+        unsettled: existing.unsettled ?? false,
+        pending_review: existing.pendingReview ?? false,
+        appeal_submitted: existing.appealSubmitted ?? false,
+        review_result: existing.reviewResult || '',
+        payment_method_count: existing.paymentMethodCount ?? 0,
       });
       // setAdAuthMethod(existing.automation_mode === 'cookie' ? 'cookie' : 'token');
     } else {
       setEditingAdId(null);
       setAdForm({
-        name: '', account_id: '', fb_ad_account_id: '', status: 'active',
+        name: '', account_id: '', fb_ad_account_id: '', fb_account_id: '',
+        pixel_id: '', owner_account: '', status: 'active',
         automation_mode: 'api', balance: 0,
         token: '', useragent: navigator.userAgent || 'Mozilla/5.0', proxy: '', cookie: '',
         cookie_raw: '', cookie_c_user: '', cookie_xs: '', cookie_datr: '',
@@ -1045,6 +1140,16 @@ const openPageForm = (existing?: Page) => {
         fetch_boosted_posts: true, fetch_dark_posts: true, fetch_lead_forms: true,
         monitor_impressions: true, monitor_clicks: true, monitor_budget: true,
         monitor_reach: true, monitor_engagement: true,
+        daily_spending_limit: 0, account_spending_limit: 0,
+        outstanding_balance: 0, available_credit: 0, billing_threshold: 0,
+        payment_method: '', card_status: '', card_expiration: '',
+        auto_pay: false, manual_pay: false, billing_notifications: true,
+        country: '', vat_id: '',
+        today_spend: 0, yesterday_spend: 0, daily_budget: 0, lifetime_budget: 0, remaining_spend: 0,
+        review_feedback: '', policy_violations: 0, account_health: '', delivery_issues: '',
+        auto_comment: false, restricted: false, unsettled: false,
+        pending_review: false, appeal_submitted: false, review_result: '',
+        payment_method_count: 0,
       });
     }
     setShowAdAuthSelect(true);
@@ -2229,6 +2334,38 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                   </div>
                 </div>
 
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Page Status & Permissions</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Linked Instagram</label>
+                      <input type="text" value={pageForm.linked_instagram} onChange={e => setPageForm({...pageForm, linked_instagram: e.target.value})} placeholder="@username" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Unpublished Reason</label>
+                      <input type="text" value={pageForm.unpublished_reason} onChange={e => setPageForm({...pageForm, unpublished_reason: e.target.value})} placeholder="Policy violation..." className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Restriction Reason</label>
+                      <input type="text" value={pageForm.restriction_reason} onChange={e => setPageForm({...pageForm, restriction_reason: e.target.value})} placeholder="Restriction details..." className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Policy Strikes</label>
+                      <input type="number" min={0} value={pageForm.policy_strike} onChange={e => setPageForm({...pageForm, policy_strike: parseInt(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-sky-500/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 pt-2">
+                    <Toggle value={pageForm.banned} onChange={v => setPageForm({...pageForm, banned: v})} label="Banned" />
+                    <Toggle value={pageForm.admin_role} onChange={v => setPageForm({...pageForm, admin_role: v})} label="Admin Role" />
+                    <Toggle value={pageForm.editor} onChange={v => setPageForm({...pageForm, editor: v})} label="Editor" />
+                    <Toggle value={pageForm.advertiser} onChange={v => setPageForm({...pageForm, advertiser: v})} label="Advertiser" />
+                    <Toggle value={pageForm.moderator} onChange={v => setPageForm({...pageForm, moderator: v})} label="Moderator" />
+                    <Toggle value={pageForm.appeal_available} onChange={v => setPageForm({...pageForm, appeal_available: v})} label="Appeal Possible" />
+                  </div>
+                </div>
+
                   <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <div>
                       <p className="text-xs font-medium text-white/70">Automation Mode</p>
@@ -2589,7 +2726,25 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                       <option value="paused" className="bg-titans-card">Paused</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Facebook Identity</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">FB Account ID</label>
+                      <input type="text" value={adForm.fb_account_id} onChange={e => setAdForm({...adForm, fb_account_id: e.target.value})} placeholder="100012345678901" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Pixel ID</label>
+                      <input type="text" value={adForm.pixel_id} onChange={e => setAdForm({...adForm, pixel_id: e.target.value})} placeholder="1234567890" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Owner Account</label>
+                    <input type="text" value={adForm.owner_account} onChange={e => setAdForm({...adForm, owner_account: e.target.value})} placeholder="act_123456789" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                  </div>
+                </div>
 
                   <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                     <div>
@@ -2823,6 +2978,106 @@ className="relative w-full sm:max-w-4xl rounded-t-3xl sm:rounded-3xl bg-titans-c
                       onChange={v => setAdForm({ ...adForm, notify_billing: v })}
                       label="Billing notices"
                     />
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Billing & Limits</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Payment Method</label>
+                      <select value={adForm.payment_method} onChange={e => setAdForm({...adForm, payment_method: e.target.value})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default">
+                        <option value="" className="bg-titans-card">None</option>
+                        <option value="visa" className="bg-titans-card">Visa</option>
+                        <option value="mastercard" className="bg-titans-card">Mastercard</option>
+                        <option value="amex" className="bg-titans-card">Amex</option>
+                        <option value="paypal" className="bg-titans-card">PayPal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Card Status</label>
+                      <input type="text" value={adForm.card_status} onChange={e => setAdForm({...adForm, card_status: e.target.value})} placeholder="active / expired" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Card Expiration</label>
+                      <input type="text" value={adForm.card_expiration} onChange={e => setAdForm({...adForm, card_expiration: e.target.value})} placeholder="MM/YY" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Country</label>
+                      <input type="text" value={adForm.country} onChange={e => setAdForm({...adForm, country: e.target.value})} placeholder="US" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">VAT ID</label>
+                      <input type="text" value={adForm.vat_id} onChange={e => setAdForm({...adForm, vat_id: e.target.value})} placeholder="VAT123" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Daily Spend Limit</label>
+                      <input type="number" min={0} step={0.01} value={adForm.daily_spending_limit} onChange={e => setAdForm({...adForm, daily_spending_limit: parseFloat(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Account Spend Limit</label>
+                      <input type="number" min={0} step={0.01} value={adForm.account_spending_limit} onChange={e => setAdForm({...adForm, account_spending_limit: parseFloat(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Billing Threshold</label>
+                      <input type="number" min={0} step={0.01} value={adForm.billing_threshold} onChange={e => setAdForm({...adForm, billing_threshold: parseFloat(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <Toggle value={adForm.auto_pay} onChange={v => setAdForm({...adForm, auto_pay: v})} label="Auto Pay" />
+                    <Toggle value={adForm.manual_pay} onChange={v => setAdForm({...adForm, manual_pay: v})} label="Manual Pay" />
+                    <Toggle value={adForm.billing_notifications} onChange={v => setAdForm({...adForm, billing_notifications: v})} label="Billing Notifications" />
+                  </div>
+                </div>
+
+                <div className="border-t border-white/[0.06] pt-6 space-y-4">
+                  <p className="text-[11px] text-white/30 font-[425] tracking-wide uppercase">Account Quality & Status</p>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Review Feedback</label>
+                    <input type="text" value={adForm.review_feedback} onChange={e => setAdForm({...adForm, review_feedback: e.target.value})} placeholder="No issues" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Policy Violations</label>
+                      <input type="number" min={0} value={adForm.policy_violations} onChange={e => setAdForm({...adForm, policy_violations: parseInt(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Payment Method Count</label>
+                      <input type="number" min={0} value={adForm.payment_method_count} onChange={e => setAdForm({...adForm, payment_method_count: parseInt(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Account Health</label>
+                      <input type="text" value={adForm.account_health} onChange={e => setAdForm({...adForm, account_health: e.target.value})} placeholder="good / warning / critical" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Delivery Issues</label>
+                      <input type="text" value={adForm.delivery_issues} onChange={e => setAdForm({...adForm, delivery_issues: e.target.value})} placeholder="None" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Review Result</label>
+                      <input type="text" value={adForm.review_result} onChange={e => setAdForm({...adForm, review_result: e.target.value})} placeholder="passed / failed / pending" className="w-full bg-transparent text-sm text-white/90 placeholder-white/20 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-white/50 mb-1.5 tracking-wide uppercase">Today Spend</label>
+                      <input type="number" min={0} step={0.01} value={adForm.today_spend} onChange={e => setAdForm({...adForm, today_spend: parseFloat(e.target.value) || 0})} className="w-full bg-transparent text-sm text-white/90 py-2.5 border-b border-white/[0.08] focus:outline-none focus:border-titans-accent/50 transition-default" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <Toggle value={adForm.restricted} onChange={v => setAdForm({...adForm, restricted: v})} label="Restricted" />
+                    <Toggle value={adForm.unsettled} onChange={v => setAdForm({...adForm, unsettled: v})} label="Unsettled" />
+                    <Toggle value={adForm.pending_review} onChange={v => setAdForm({...adForm, pending_review: v})} label="Pending Review" />
+                    <Toggle value={adForm.appeal_submitted} onChange={v => setAdForm({...adForm, appeal_submitted: v})} label="Appeal Submitted" />
+                    <Toggle value={adForm.auto_comment} onChange={v => setAdForm({...adForm, auto_comment: v})} label="Auto Comment" />
                   </div>
                 </div>
 
